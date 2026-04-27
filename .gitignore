@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+.DS_Store
+
+# Environments (CRITICAL: Do not push your keys)
+.env
+.env.local
+
+# Server specific
+server/temp_uploads/*
+!server/temp_uploads/.gitkeep
+
+# Production builds
+client/dist/

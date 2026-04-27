@@ -1,0 +1,60 @@
+/* Import the modern Tailwind v4 engine */
+@import "tailwindcss";
+
+/* Custom Theme Variables 
+  These match the dark, sleek UI of professional editors like your reference image.
+*/
+@theme {
+  --color-editor-bg: #0a0a0a;     /* Deepest black for the app background */
+  --color-panel-bg: #121212;      /* Slightly lighter for sidebars and panels */
+  --color-panel-border: #262626;  /* Subtle borders between sections */
+  --color-accent: #10b981;        /* The green accent color seen in the Kalakaar UI */
+}
+
+/* Base Application Styles */
+@layer base {
+  html, body {
+    @apply bg-[var(--color-editor-bg)] text-neutral-100 font-sans antialiased m-0 p-0 overflow-hidden w-full h-full;
+  }
+
+  /* Custom scrollbar for a premium feel in the timeline and sidebars */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neutral-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-neutral-500;
+  }
+}
+
+/* Custom Fonts */
+@font-face {
+    font-family: 'Blacksword';
+    src: url('/fonts/Blacksword.otf') format('opentype'); 
+}
+
+/* The standard, clean version */
+@font-face {
+    font-family: 'Coolvetica';
+    src: url('/fonts/Coolvetica Rg.otf') format('opentype');
+    font-weight: normal;
+}
+
+/* The thick, viral short-form version */
+@font-face {
+    font-family: 'Coolvetica Heavy';
+    src: url('/fonts/Coolvetica Hv Comp.otf') format('opentype');
+    font-weight: 900;
+}
+
+/* Add Apple Garamond here once you download it! */
+@font-face {
+    font-family: 'Apple Garamond';
+    src: url('/fonts/AppleGaramond.ttf') format('truetype');
+}

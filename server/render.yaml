@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: caption-crow-server
+    env: docker
+    plan: free # Change to 'starter' if your video processing takes > 30s
+    region: singapore # Choose the region closest to you
+
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false # You will paste the value in the Render Dashboard
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
