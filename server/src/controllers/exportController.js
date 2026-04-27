@@ -31,8 +31,8 @@ export const handleExport = async (req, res, next) => {
         await burnSubtitles(inputVideoPath, assFilePath, outputVideoPath);
 
         // 3. Return the URL so the React frontend can download it
-        // We assume Express is serving the temp_uploads folder statically
-        const downloadUrl = `http://localhost:5000/downloads/${outputVideoName}`;
+        // 🟢 UPDATED: Pointing to the live Render backend URL instead of localhost
+        const downloadUrl = `https://captioncrow.onrender.com/downloads/${outputVideoName}`;
 
         res.status(200).json({
             success: true,
