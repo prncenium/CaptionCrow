@@ -21,9 +21,13 @@ connectDB();
 
 // Core Middlewares
 app.use(cors({
-    // IMPORTANT: Once your Vercel site is live, add the URL here
-    origin: ['http://localhost:5173', 'https://your-app-name.vercel.app'],
-    credentials: true
+    origin: [
+        'http://localhost:5173', 
+        'https://caption-crow.vercel.app'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
