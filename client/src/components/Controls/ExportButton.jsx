@@ -26,8 +26,8 @@ export default function ExportButton() {
         );
         
         try {
-            // Hit our new backend rendering pipeline
-            const response = await axios.post('http://localhost:5000/api/export', {
+            // 🟢 UPDATED: Using the .env variable for the live Render URL
+            const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/export`, {
                 transcription: chunkedCaptions, // Send the grouped chunks, NOT the raw words
                 styles: activeStyle,
                 originalFileName: serverVideoFilename
