@@ -2,8 +2,6 @@ services:
   - type: web
     name: caption-crow-server
     env: docker
-    dockerfilePath: ./server/Dockerfile   # path from repo root
-    dockerContext: ./server               # Docker build context = server/ folder
     plan: free
     region: singapore
     healthCheckPath: /api/healthz
