@@ -1,81 +1,75 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEditorStore } from './store/useEditorStore';
-import VideoDropzone from './components/Upload/VideoDropzone';
-import VideoPlayer from './components/Editor/VideoPlayer';
-import Timeline from './components/Editor/Timeline'; 
-import CaptionList from './components/Editor/CaptionList'; // <-- NEW: Imported CaptionList
-import StyleSelector from './components/Controls/StyleSelector';
-import ColorPicker from './components/Controls/ColorPicker';
-import ExportButton from './components/Controls/ExportButton';
+
+// UI Components
+import Navbar from './components/common/Navbar'; // Double check if this is in 'common' or 'layout'
+
+// Pages
+import DashboardPage from './pages/DashboardPage';
+import EditorPage from './pages/EditorPage';
+import ExportPage from './pages/ExportPage';
+import FeedbackPage from './pages/FeedbackPage';
+import BillingPage from './pages/BillingPage';
+import LibraryPage from './pages/LibraryPage';
+import MyEditsPage from './pages/MyEditsPage';
+import LoginPage from './pages/LoginPage';
 
 export default function App() {
-  // Read from our global brain to see if the user has uploaded a file yet
   const { videoFile } = useEditorStore();
 
   return (
-    <div className="flex flex-col h-screen bg-[#0a0a0a]">
-      {/* Top Navigation Bar */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-[#121212] flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-8 h-8 font-bold text-black bg-emerald-500 rounded-md shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-            C
-          </div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Caption-Crow</h1>
-        </div>
+    <Router>
+      {/* 🚨 STRIPPED THE DARK MODE CLASSES 🚨
+        Removed bg-[#0a0a0a] and text-white. 
+        It is now bg-transparent so the index.css gradient shines through! 
+      */}
+      <div className="flex flex-col h-screen bg-transparent overflow-hidden">
         
-        {/* Export Button (Only shows when editing) */}
-        {videoFile && (
-          <ExportButton />
-        )}
-      </header>
+        {/* Global Navigation */}
+        <Navbar />
 
-      {/* Main Workspace */}
-      <main className="flex flex-1 overflow-hidden">
-        {!videoFile ? (
-          /* State 1: Upload View */
-          <VideoDropzone />
-        ) : (
-          /* State 2: Full Editor View */
-          <div className="flex flex-col w-full h-full p-4 gap-4">
+        {/* Main Content Area */}
+        <main className="flex-1 flex overflow-hidden">
+          <Routes>
+            {/* Dashboard / Upload Hub */}
+            <Route path="/" element={<DashboardPage />} />
             
-            {/* Top Row: 3-Column Layout */}
-            <div className="flex flex-1 min-h-0 gap-4 overflow-hidden">
-              
-              {/* Left Column: Captions List */}
-              <div className="w-80 flex-shrink-0 flex flex-col">
-                 <CaptionList />
+            {/* 1. Guarded Editor Route: Redirect to home if no file exists */}
+            <Route 
+              path="/editor" 
+              element={videoFile ? <EditorPage /> : <Navigate to="/" replace />} 
+            />
+            
+            {/* 2. Guarded Export Route: Redirect to home if no file exists */}
+            <Route 
+              path="/export" 
+              element={videoFile ? <ExportPage /> : <Navigate to="/" replace />} 
+            />
+            
+            {/* Public Pages */}
+            <Route path="/feedback" element={<FeedbackPage />} />
+            
+            {/* Construction Placeholders - Updated to Light Theme Slate colors */}
+            <Route path="/library" element={<LibraryPage />} />
+
+            <Route path="/history" element={
+              <div className="flex flex-col items-center justify-center w-full h-full text-slate-500">
+                <p className="text-sm font-bold uppercase tracking-widest text-slate-800">History</p>
+                <p className="text-xs mt-2 italic opacity-60">Rendering database connection pending</p>
               </div>
+            } />
 
-              {/* Center Column: Video Player */}
-              <div className="flex-1 relative border rounded-xl border-neutral-800 bg-black flex items-center justify-center overflow-hidden shadow-2xl">
-                <VideoPlayer />
-              </div>
-
-              {/* Right Column: Styling Controls (Moved from left to right) */}
-              <aside className="flex flex-col w-80 gap-6 flex-shrink-0 p-5 overflow-y-auto border rounded-xl border-neutral-800 bg-[#121212]">
-                <div>
-                  <h3 className="mb-4 text-sm font-semibold tracking-wider text-neutral-400 uppercase">Typography Controls</h3>
-                  <StyleSelector />
-                </div>
-                
-                <hr className="border-neutral-800" />
-                
-                <div>
-                  <h3 className="mb-4 text-sm font-semibold tracking-wider text-neutral-400 uppercase">Color Styles</h3>
-                  <ColorPicker />
-                </div>
-              </aside>
-
-            </div>
-
-            {/* Bottom Row: The Advanced NLE Timeline */}
-            <div className="flex-shrink-0 border rounded-xl border-neutral-800 bg-[#121212] overflow-hidden shadow-lg">
-               <Timeline />
-            </div>
-
-          </div>
-        )}
-      </main>
-    </div>
+            <Route path="/billing" element={<BillingPage />} />
+            <Route path="/my-edits" element={<MyEditsPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            
+            {/* Catch-all Redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+        
+      </div>
+    </Router>
   );
 }

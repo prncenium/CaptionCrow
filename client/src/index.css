@@ -1,60 +1,193 @@
 /* Import the modern Tailwind v4 engine */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Chewy&family=Open+Sans:wght@400;700&display=swap');
 @import "tailwindcss";
 
-/* Custom Theme Variables 
-  These match the dark, sleek UI of professional editors like your reference image.
-*/
 @theme {
-  --color-editor-bg: #0a0a0a;     /* Deepest black for the app background */
-  --color-panel-bg: #121212;      /* Slightly lighter for sidebars and panels */
-  --color-panel-border: #262626;  /* Subtle borders between sections */
-  --color-accent: #10b981;        /* The green accent color seen in the Kalakaar UI */
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  --font-marker: "Chewy", cursive;
+  --color-editor-bg: #f5f5f7;
+  --color-panel-bg: rgba(255, 255, 255, 0.45);
+  --color-panel-border: rgba(255, 255, 255, 0.6);
+  --color-accent: #007AFF;
 }
 
-/* Base Application Styles */
 @layer base {
-  html, body {
-    @apply bg-[var(--color-editor-bg)] text-neutral-100 font-sans antialiased m-0 p-0 overflow-hidden w-full h-full;
+  :root {
+    --gradient-bg: linear-gradient(145deg, #EED9F7 0%, #F5C6D8 25%, #FFCCE0 50%, #C8D8F8 78%, #B8D4F5 100%);
   }
 
-  /* Custom scrollbar for a premium feel in the timeline and sidebars */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    color: #1d1d1f;
+    letter-spacing: -0.015em;
+  }
+
+  body {
+    background: var(--gradient-bg);
+    background-attachment: fixed;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  input, textarea, select, button {
+    font-family: inherit;
+    letter-spacing: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  /* Slim iOS-style scrollbars */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
   ::-webkit-scrollbar-track {
     background: transparent;
   }
+
   ::-webkit-scrollbar-thumb {
-    @apply bg-neutral-700 rounded-full;
+    background: rgba(100, 80, 120, 0.20);
+    border-radius: 99px;
   }
+
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-neutral-500;
+    background: rgba(100, 80, 120, 0.38);
   }
 }
 
-/* Custom Fonts */
+/* Animations */
+@layer utilities {
+  @keyframes shimmerIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in {
+    animation: shimmerIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .fade-up {
+    animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+/* --- CUSTOM FONTS (For the Video Canvas) --- */
+
 @font-face {
     font-family: 'Blacksword';
     src: url('/fonts/Blacksword.otf') format('opentype'); 
-}
-
-/* The standard, clean version */
-@font-face {
-    font-family: 'Coolvetica';
-    src: url('/fonts/Coolvetica Rg.otf') format('opentype');
     font-weight: normal;
 }
 
-/* The thick, viral short-form version */
 @font-face {
-    font-family: 'Coolvetica Heavy';
+    font-family: 'Apple Garamond';
+    src: url('/fonts/AppleGaramond-BoldItalic.ttf') format('truetype');
+    font-weight: 700;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Coolvetica';
+    src: url('/fonts/Coolvetica Rg.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Coolvetica'; 
     src: url('/fonts/Coolvetica Hv Comp.otf') format('opentype');
+    font-weight: 900; 
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-Regular.ttf') format('truetype');
+    font-weight: 400;
+}
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-Medium.ttf') format('truetype');
+    font-weight: 500;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-Bold.ttf') format('truetype');
+    font-weight: 700;
+}
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-ExtraBold.ttf') format('truetype');
+    font-weight: 800;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-Black.ttf') format('truetype');
     font-weight: 900;
 }
 
-/* Add Apple Garamond here once you download it! */
+/* Poppins Italic Mappings */
 @font-face {
-    font-family: 'Apple Garamond';
-    src: url('/fonts/AppleGaramond.ttf') format('truetype');
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-Italic.ttf') format('truetype');
+    font-weight: 400;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-MediumItalic.ttf') format('truetype');
+    font-weight: 500;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-SemiBoldItalic.ttf') format('truetype');
+    font-weight: 600;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-BoldItalic.ttf') format('truetype');
+    font-weight: 700;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-ExtraBoldItalic.ttf') format('truetype');
+    font-weight: 800;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-BlackItalic.ttf') format('truetype');
+    font-weight: 900;
+    font-style: italic;
 }

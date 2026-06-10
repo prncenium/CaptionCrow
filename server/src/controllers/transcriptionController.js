@@ -1,14 +1,10 @@
 import Project from '../models/Project.js';
 import { convertToHinglish } from '../utils/hinglishConverter.js';
-import { transcribeAudioWordLevel } from '../services/groqService.js';
+// 🚨 UPDATED IMPORT: Bring in the new analyzer
+import { transcribeAudioWordLevel, analyzeTranscriptForHighlights } from '../services/groqService.js';
 import { extractOptimizedAudio } from '../services/ffmpegService.js';
-
 import fs from 'fs-extra';
 
-/**
- * Regenerates or fetches transcription for an existing saved project.
- * Useful for when a user wants to retry AI generation or reset their workspace.
- */
 export const regenerateTranscription = async (req, res, next) => {
     const { projectId } = req.params;
 
@@ -19,33 +15,32 @@ export const regenerateTranscription = async (req, res, next) => {
             return res.status(404).json({ success: false, error: 'Project not found.' });
         }
 
-        // In a full production app, you would fetch the videoUrl from AWS S3 here.
-        // For local development, we verify the file exists on the local machine.
         if (!project.videoUrl || !(await fs.pathExists(project.videoUrl))) {
             return res.status(400).json({ success: false, error: 'Source video file is missing.' });
         }
 
-        // Run the optimized extraction and transcription pipeline
         const audioPath = await extractOptimizedAudio(project.videoUrl);
-        
-        // 1. Get the raw Hindi from the audio
         const rawHindiTranscription = await transcribeAudioWordLevel(audioPath); 
 
-        // Clean up the temporary audio immediately
         await fs.remove(audioPath).catch(err => console.error(`[Cleanup Error] ${err.message}`));
 
-        // 👇 2. NEW: Pass the Hindi through the converter to get Hinglish 👇
         const finalHinglishTranscription = await convertToHinglish(rawHindiTranscription);
 
-        // 👇 3. NEW: Save the Hinglish version to your database 👇
+        // 👇 1. NEW: Combine words into a single string for LLaMA to read 👇
+        const fullTranscriptText = finalHinglishTranscription.map(w => w.word || w.text).join(' ');
+        
+        // 👇 2. NEW: Get the smart highlights array 👇
+        const highlightedWords = await analyzeTranscriptForHighlights(fullTranscriptText);
+
         project.transcription = finalHinglishTranscription;
         await project.save();
 
         res.status(200).json({ 
             success: true, 
             message: 'Transcription regenerated successfully.',
-            // 👇 4. NEW: Send the Hinglish version to your React frontend 👇
-            data: finalHinglishTranscription 
+            data: finalHinglishTranscription,
+            // 👇 3. NEW: Send the smart array back to the React frontend 👇
+            aiHighlights: highlightedWords 
         });
 
     } catch (error) {

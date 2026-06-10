@@ -1,36 +1,47 @@
-import axios from 'axios';
 import { useEditorStore } from '../store/useEditorStore';
+import { useProjectStore } from '../store/useProjectStore';
 
-const apiClient = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL, 
-});
+export function useTranscription() {
+    // 1. PULL IN THE MISSING SETTER
+    const { setTranscription, setIsProcessing, setServerVideoFilename } = useEditorStore();
 
-export const useTranscription = () => {
-    const { setIsProcessing, setTranscription, setServerVideoFilename } = useEditorStore();
-
-    const uploadAndTranscribe = async (videoFile) => {
+    const uploadAndTranscribe = async (file) => {
         setIsProcessing(true);
-        const formData = new FormData();
-        formData.append('video', videoFile);
-
+        
         try {
-            const response = await apiClient.post('/upload', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
+            const formData = new FormData();
+            formData.append('video', file);
+
+            const response = await fetch('http://localhost:5000/api/upload', {
+                method: 'POST',
+                body: formData
             });
-            
-            if (response.data.success) {
-                setTranscription(response.data.data);
-                // NEW: Save the backend filename so we can export it later
-                setServerVideoFilename(response.data.originalFileName);
+
+            const result = await response.json();
+
+            if (result.success) {
+                // 2. Save the AI transcript
+                setTranscription(result.data, result.aiHighlights);
+                
+                // 3. THE CRITICAL FIX: Save the exact name the server generated!
+                if (result.originalFileName) {
+                    setServerVideoFilename(result.originalFileName);
+                }
+
+                // Track this session in My Edits
+                useProjectStore.getState().addEdit(file.name);
+
+                setIsProcessing(false);
                 return true;
+            } else {
+                throw new Error(result.error || "Upload failed");
             }
         } catch (error) {
-            console.error("Transcription failed:", error);
-            return false;
-        } finally {
+            console.error("Transcription Error:", error);
             setIsProcessing(false);
+            return false;
         }
     };
 
     return { uploadAndTranscribe };
-};
+}

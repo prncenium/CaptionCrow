@@ -1,61 +1,116 @@
 /**
- * Calculates the exact X, Y, Opacity, and Scale of a caption block based on the video's current time.
+ * Calculates the exact X, Y, Opacity, Scale, and Blur of a caption block based on the video's current time.
  * @param {Number} currentTime - The current millisecond of the video
  * @param {Number} chunkStart - The exact time the caption block begins
  * @param {String} animationStyle - The type of animation (slideUp, slideLeft, popIn, none)
  * @param {Object} dimensions - The width and height of the canvas to calculate off-screen offsets
  * @param {Number} customDurationMs - The custom duration of the animation in milliseconds
- * @returns {Object} { offsetX, offsetY, opacity, scale, progress }
+ * @returns {Object} { offsetX, offsetY, opacity, scale, blur, progress }
  */
-export const calculateAnimation = (currentTime, chunkStart, animationStyle, dimensions, customDurationMs = 300) => {
-    // Convert the user's millisecond choice (e.g., 300) into seconds for the math (e.g., 0.3)
+export const calculateAnimation = (currentTime, chunkStart, animationStyle, dimensions, customDurationMs = 220) => {
     const introDuration = customDurationMs / 1000; 
-    
-    // Calculate how many seconds we are into this specific word/chunk
     const elapsed = currentTime - chunkStart;
 
-    // If the text hasn't started yet, hide it completely
-    if (elapsed < 0) return { offsetX: 0, offsetY: 0, opacity: 0, scale: 1, progress: 0 };
+    // 1. Move the style matching UP here so we know if it's a "popin" BEFORE it starts
+    const styleStr = String(animationStyle || 'none').toLowerCase().replace(/\s+/g, '');
+    let normalizedStyle = 'none';
+    if (styleStr.includes('up')) normalizedStyle = 'slideup';
+    else if (styleStr.includes('down')) normalizedStyle = 'slidedown';
+    else if (styleStr.includes('fromright') || styleStr === 'slideright') normalizedStyle = 'slideright';
+    else if (styleStr.includes('fromleft') || styleStr === 'slideleft') normalizedStyle = 'slideleft';
+    else if (styleStr.includes('pop')) normalizedStyle = 'popin';
+    else if (styleStr.includes('bounce')) normalizedStyle = 'bounce';
+    else if (styleStr.includes('fade')) normalizedStyle = 'fadein';
 
-    // Calculate progress from 0.0 to 1.0 (e.g., 0.5 means the animation is 50% finished)
-    // Using easeOut effect so it snaps in fast and settles smoothly
+    const initialScale =
+        normalizedStyle === 'bounce' ? 0.90  // bounce: start slightly small (above baseline)
+        : normalizedStyle === 'popin'  ? 0.5  // popin: start small
+        : 0.8;                                // slides: near full size
+
+    const initialOffsetY =
+        normalizedStyle === 'bounce'  ? 38   // bounce: start 38px BELOW target (rises up)
+        : normalizedStyle === 'popin' ? 0
+        : normalizedStyle === 'none'  ? 0   // none/karaoke: no Y displacement (fixes Cinematic)
+        : normalizedStyle === 'fadein'? 0
+        : 40;                               // slide styles only
+
+    // 3. Apply the correct starting state
+    if (elapsed < 0) return { offsetX: 0, offsetY: initialOffsetY, opacity: 0, scale: initialScale, blur: 0, progress: 0 };
+
     const linearProgress = Math.min(elapsed / introDuration, 1);
-    const progress = 1 - Math.pow(1 - linearProgress, 3); // Cubic Ease-Out math
+    
+    // 🚨 OPACITY DELAY MATH: Stays 0 for the first 15% of the animation, then fades smoothly
+    const opacityProgress = Math.min(1, Math.max(0, (linearProgress - 0.15) / 0.85));
 
-    // Default state (fully visible, centered) exporting progress for the Motion Blur engine
-    let state = { offsetX: 0, offsetY: 0, opacity: 1, scale: 1, progress: progress };
+    // 🚨 THE HORMOZI CURVE (Cubic Ease-Out)
+    const progress = 1 - Math.pow(1 - linearProgress, 3); // Position curve
+    const hormoziScale = 0.8 + (0.2 * progress); // Scale curve
 
-    // If the animation is already 100% done, just return the default state immediately to save CPU
+    // Set blur to 0 globally for frontend performance
+    let state = { offsetX: 0, offsetY: 0, opacity: 1, scale: 1, blur: 0, progress: progress };
+
     if (progress === 1) return state;
 
-    // Apply the math based on the chosen style
-    switch (animationStyle) {
-        case 'slideUp':
-            state.offsetY = 50 - (50 * progress); // Starts 50px lower, moves up to 0
-            state.opacity = progress;
+    
+
+    switch (normalizedStyle) {
+        case 'slideup': {
+            state.offsetY = 40 - (40 * progress);
+            state.opacity = opacityProgress;
+            state.scale = hormoziScale;
             break;
-        case 'slideDown':
-            state.offsetY = -50 + (50 * progress); // Starts 50px higher, moves down to 0
-            state.opacity = progress;
+        }
+        case 'slidedown': {
+            state.offsetY = -40 + (40 * progress); 
+            state.opacity = opacityProgress;
+            state.scale = hormoziScale;
             break;
-        case 'slideLeft':
-            state.offsetX = 100 - (100 * progress); // Starts 100px right, moves left to 0
-            state.opacity = progress;
+        }
+        case 'slideright': {
+            state.offsetX = 100 - (100 * progress);
+            state.opacity = opacityProgress;
+            state.scale = hormoziScale;
             break;
-        case 'slideRight':
-            state.offsetX = -100 + (100 * progress); // Starts 100px left, moves right to 0
-            state.opacity = progress;
+        }
+        case 'slideleft': {
+            state.offsetX = -100 + (100 * progress); 
+            state.opacity = opacityProgress;
+            state.scale = hormoziScale;
             break;
-        case 'popIn':
-            state.scale = 0.5 + (0.5 * progress); // Starts at 50% size, grows to 100%
-            state.opacity = progress;
+        }
+        case 'popin': { // 🚨 Added {
+            let bounceScale = 1;
+            if (linearProgress < 0.4) {
+                const p = linearProgress / 0.4;
+                bounceScale = 0.5 + (0.65 * (1 - Math.pow(1 - p, 3))); 
+            } else {
+                const p = (linearProgress - 0.4) / 0.6;
+                bounceScale = 1.15 - (0.15 * (1 - Math.pow(1 - p, 2))); 
+            }
+            state.scale = bounceScale; 
+            state.opacity = opacityProgress;
             break;
-        case 'fadeIn':
-            state.opacity = progress;
+        } 
+
+        case 'bounce': {
+            // Smooth underdamped spring — single continuous function, no phase breaks.
+            // y(t) = 38·e^(−5.5t)·cos(10.5t): starts +38px below baseline, overshoots above, settles at 0.
+            // scale(t) = 1 − 0.10·e^(−5.5t)·cos(10.5t): mirrors y, starts at 0.90, settles at 1.0.
+            // Both functions share the same envelope so velocity is always continuous — no jerks.
+            const A     = 38;
+            const decay = 5.5;
+            const freq  = 10.5;
+            const env   = Math.exp(-decay * linearProgress) * Math.cos(freq * linearProgress);
+
+            state.offsetY = A * env;              // +38 → oscillates → 0
+            state.scale   = 1.0 - 0.10 * env;    // 0.90 → oscillates around 1 → 1.0
+            state.opacity = Math.min(1, linearProgress / 0.20);
             break;
-        default:
-            // 'none'
+        }
+        case 'fadein': {
+            state.opacity = opacityProgress;
             break;
+        }
     }
 
     return state;

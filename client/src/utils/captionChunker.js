@@ -1,18 +1,49 @@
 export const groupCaptions = (words, maxChars, maxLines) => {
     if (!words || words.length === 0) return [];
 
-    // BULLETPROOF FIX: Force incoming parameters to be strict integers. 
-    // If the React state drops them, fall back to safe defaults (11 chars, 1 line).
-    const safeMaxChars = parseInt(maxChars, 10) || 11;
+    const safeMaxChars = parseInt(maxChars, 10) || 20; 
     const safeMaxLines = parseInt(maxLines, 10) || 1;
 
+    // 🚨 CINEMATIC FIX
+    if (safeMaxLines === 3) {
+        const chunks = [];
+        let currentStack = [];
+        let currentStackObj = []; // 🚨 Tracks the original word objects
+        let currentStart = null;
+
+        for (let i = 0; i < words.length; i++) {
+            const wordObj = words[i];
+            if (currentStart === null) currentStart = wordObj.start;
+
+            currentStack.push(wordObj.word.trim());
+            currentStackObj.push(wordObj); // 🚨 Save the object
+
+            if (currentStack.length === 3 || i === words.length - 1) {
+                chunks.push({
+                    text: currentStack.join('\n'), 
+                    start: currentStart,
+                    end: wordObj.end,
+                    words: currentStackObj // 🚨 Pass the data forward!
+                });
+                currentStack = [];
+                currentStackObj = [];
+                currentStart = null;
+            }
+        }
+        return chunks;
+    }
+
+    // ====================================================
+    // ORIGINAL LOGIC 
+    // ====================================================
     const chunks = [];
     let currentLineWords = [];
+    let currentBlockWords = []; // 🚨 Tracks the original word objects
     let currentLines = [];
     let currentStart = null;
-    let currentEnd = null;
 
-    for (const wordObj of words) {
+    for (let i = 0; i < words.length; i++) {
+        const wordObj = words[i];
         const wordText = wordObj.word.trim();
         
         if (currentStart === null) currentStart = wordObj.start;
@@ -22,37 +53,41 @@ export const groupCaptions = (words, maxChars, maxLines) => {
             ? wordText.length 
             : currentLineString.length + 1 + wordText.length;
 
-        // Use safeMaxChars here
         if (newLength > safeMaxChars && currentLineWords.length > 0) {
             currentLines.push(currentLineWords.join(" "));
             currentLineWords = [wordText]; 
 
-            // Use safeMaxLines here
             if (currentLines.length >= safeMaxLines) {
+                const prevWord = words[i - 1];
                 chunks.push({
                     text: currentLines.join("\n"), 
                     start: currentStart,
-                    end: currentEnd 
+                    end: prevWord.end,
+                    words: currentBlockWords // 🚨 Pass the data forward!
                 });
                 
                 currentLines = [];
-                currentStart = wordObj.start;
+                currentBlockWords = [wordObj]; // 🚨 Start new block with this word
+                currentStart = wordObj.start; 
+            } else {
+                currentBlockWords.push(wordObj);
             }
         } else {
             currentLineWords.push(wordText);
+            currentBlockWords.push(wordObj);
         }
-        
-        currentEnd = wordObj.end;
     }
 
     if (currentLineWords.length > 0) {
         currentLines.push(currentLineWords.join(" "));
     }
+    
     if (currentLines.length > 0) {
         chunks.push({
             text: currentLines.join("\n"),
             start: currentStart,
-            end: currentEnd
+            end: words[words.length - 1].end,
+            words: currentBlockWords // 🚨 Pass the data forward!
         });
     }
 
