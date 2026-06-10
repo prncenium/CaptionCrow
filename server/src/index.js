@@ -20,11 +20,17 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 // Core Middlewares
+const allowedOrigins = [
+    'http://localhost:5173',
+    process.env.CLIENT_URL,           // set this in Render dashboard
+].filter(Boolean);
+
 app.use(cors({
-    origin: [
-        'http://localhost:5173', 
-        'https://caption-crow.vercel.app'
-    ],
+    origin: (origin, callback) => {
+        // allow requests with no origin (Postman, curl, server-to-server)
+        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']

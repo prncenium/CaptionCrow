@@ -2,18 +2,21 @@ services:
   - type: web
     name: caption-crow-server
     env: docker
-    rootDir: server          # tells Render to treat server/ as the build root
+    rootDir: server          # Render will cd into server/ before building
     dockerfilePath: ./Dockerfile
     plan: free               # upgrade to 'starter' if video jobs exceed 30s
     region: singapore
+    healthCheckPath: /api/healthz
 
     envVars:
       - key: PORT
         value: 5000
       - key: NODE_ENV
         value: production
+      - key: CLIENT_URL
+        sync: false          # your Vercel URL e.g. https://caption-crow.vercel.app
       - key: MONGODB_URI
-        sync: false          # paste in Render dashboard
+        sync: false
       - key: GROQ_API_KEY
         sync: false
       - key: GEMINI_API_KEY
