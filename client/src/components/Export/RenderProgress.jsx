@@ -14,6 +14,10 @@ export default function RenderProgress() {
             alert("No video file found! Please upload a video first.");
             return;
         }
+        if (!timelineBlocks || timelineBlocks.length === 0) {
+            alert("No captions found! Please wait for the transcription to finish before exporting.");
+            return;
+        }
 
         setRenderStatus('rendering');
         setProgress(10); 

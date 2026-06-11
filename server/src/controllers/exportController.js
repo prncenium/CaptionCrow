@@ -65,8 +65,15 @@ export const handleExport = async (req, res, next) => {
     try {
         const { filename, timelineBlocks, globalLineOffsets, activeStyle, lineStyles } = req.body;
 
-        if (!filename || !timelineBlocks || !activeStyle) {
-            return res.status(400).json({ success: false, message: 'Missing required export data.' });
+        const missing = [];
+        if (!filename) missing.push('filename');
+        if (!timelineBlocks) missing.push('timelineBlocks');
+        if (!activeStyle) missing.push('activeStyle');
+        if (missing.length > 0) {
+            return res.status(400).json({ success: false, message: `Missing required export data: ${missing.join(', ')}` });
+        }
+        if (!Array.isArray(timelineBlocks) || timelineBlocks.length === 0) {
+            return res.status(400).json({ success: false, message: 'No caption blocks to export. Please process your video first.' });
         }
 
         const tempDir = path.resolve('temp_uploads');
