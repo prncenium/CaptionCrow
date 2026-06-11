@@ -19,8 +19,23 @@ export default function RenderProgress() {
             return;
         }
 
+        const bodyPayload = JSON.stringify({
+            filename: serverVideoFilename,
+            timelineBlocks,
+            globalLineOffsets,
+            activeStyle,
+            lineStyles,
+            previewContainerWidth: 360
+        });
+        console.log('[Export] Sending to server:', {
+            filename: serverVideoFilename,
+            timelineBlocksCount: timelineBlocks.length,
+            activeStylePresent: !!activeStyle,
+            bodySizeKB: (bodyPayload.length / 1024).toFixed(1)
+        });
+
         setRenderStatus('rendering');
-        setProgress(10); 
+        setProgress(10);
 
         // 🚨 NEW: FAKE PROGRESS SIMULATION 🚨
         // This will slowly increment the progress while we wait for the server
@@ -39,14 +54,7 @@ export default function RenderProgress() {
             const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/export`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    filename: serverVideoFilename, 
-                    timelineBlocks, 
-                    globalLineOffsets, 
-                    activeStyle,
-                    lineStyles,
-                    previewContainerWidth: 360 
-                })
+                body: bodyPayload
             });
 
             // 🚨 SERVER RESPONDED! Stop the fake progress immediately 🚨
