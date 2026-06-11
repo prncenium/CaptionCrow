@@ -32,7 +32,7 @@ export default function RenderProgress() {
         }, 800); // Updates every 800 milliseconds
 
         try {
-            const response = await fetch('http://localhost:5000/api/export', {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/export`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 

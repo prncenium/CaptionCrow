@@ -27,7 +27,7 @@ export default function FeedbackPage() {
 
     try {
       // 2. Send to your Node.js backend
-      const response = await fetch('http://localhost:5000/api/feedback', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/feedback`, {
         method: 'POST',
         body: submitData, // Notice: No 'Content-Type' header! Browser sets it automatically for FormData
       });

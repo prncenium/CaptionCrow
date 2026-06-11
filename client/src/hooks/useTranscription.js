@@ -12,7 +12,7 @@ export function useTranscription() {
             const formData = new FormData();
             formData.append('video', file);
 
-            const response = await fetch('http://localhost:5000/api/upload', {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/upload`, {
                 method: 'POST',
                 body: formData
             });

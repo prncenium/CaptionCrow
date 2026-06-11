@@ -324,7 +324,7 @@ applyPreset: (presetId) => {
         const fullText = state.transcription.map(w => w.word || w.text || '').filter(Boolean).join(' ');
 
         try {
-            const response = await fetch('http://localhost:5000/api/refresh-highlights', {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/refresh-highlights`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ transcriptText: fullText })
