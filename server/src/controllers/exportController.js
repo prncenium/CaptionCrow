@@ -63,6 +63,9 @@ const mapFontFamily = (currentStyle) => {
 
 export const handleExport = async (req, res, next) => {
     try {
+        const bodyKeys = req.body ? Object.keys(req.body) : [];
+        console.log(`[Export] body keys: ${bodyKeys.join(', ')} | body size: ${JSON.stringify(req.body)?.length ?? 0} chars`);
+
         const { filename, timelineBlocks, globalLineOffsets, activeStyle, lineStyles } = req.body;
 
         const missing = [];
