@@ -3,7 +3,7 @@ import { useProjectStore } from '../store/useProjectStore';
 
 export function useTranscription() {
     // 1. PULL IN THE MISSING SETTER
-    const { setTranscription, setIsProcessing, setServerVideoFilename } = useEditorStore();
+    const { setTranscription, setIsProcessing, setServerVideoFilename, bakeTimeline } = useEditorStore();
 
     const uploadAndTranscribe = async (file) => {
         setIsProcessing(true);
@@ -22,8 +22,11 @@ export function useTranscription() {
             if (result.success) {
                 // 2. Save the AI transcript
                 setTranscription(result.data, result.aiHighlights);
-                
-                // 3. THE CRITICAL FIX: Save the exact name the server generated!
+
+                // 3. Build caption blocks immediately so export works from any page
+                bakeTimeline();
+
+                // 4. THE CRITICAL FIX: Save the exact name the server generated!
                 if (result.originalFileName) {
                     setServerVideoFilename(result.originalFileName);
                 }
