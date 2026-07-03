@@ -22,14 +22,14 @@ export default function VideoDropzone() {
         }
 
         const localVideoUrl = URL.createObjectURL(file);
-        setVideo(file, localVideoUrl);
 
         const success = await uploadAndTranscribe(file);
         if (success !== true) {
-            alert('Transcription failed. The server may be waking up (free tier) — wait 30 seconds and try again.');
+            alert('Transcription failed. Make sure the local server is running:\n  cd server && npm run dev');
             return;
         }
 
+        setVideo(file, localVideoUrl);
         navigate('/editor');
     };
 

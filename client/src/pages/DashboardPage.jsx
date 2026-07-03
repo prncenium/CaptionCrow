@@ -41,17 +41,16 @@ export default function DashboardPage() {
       setUploadModal((prev) => ({ ...prev, isOpen: false })); 
 
       const localVideoUrl = URL.createObjectURL(file);
-      setVideo(file, localVideoUrl);
 
-      // This hook likely clears the slate. We wait for it to finish!
       const success = await uploadAndTranscribe(file);
-      
+
       if (success === true) {
+          setVideo(file, localVideoUrl);
           applyPreset(targetPresetId);
           useEditorStore.getState().bakeTimeline();
           navigate('/editor');
       } else {
-          alert('Transcription failed. The server may be waking up (free tier) — wait 30 seconds and try again.');
+          alert('Transcription failed. Make sure the local server is running:\n  cd server && npm run dev');
       }
   };
 

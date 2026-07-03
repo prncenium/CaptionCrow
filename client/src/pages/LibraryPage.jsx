@@ -48,15 +48,15 @@ export default function LibraryPage() {
     setUploadModal({ isOpen: false, presetId: null, presetName: '' });
 
     const localVideoUrl = URL.createObjectURL(file);
-    setVideo(file, localVideoUrl);
 
     const success = await uploadAndTranscribe(file);
-    if (success) {
+    if (success === true) {
+      setVideo(file, localVideoUrl);
       applyPreset(targetPresetId);
       useEditorStore.getState().bakeTimeline();
       navigate('/editor');
     } else {
-      alert('Transcription failed. Please check your server connection.');
+      alert('Transcription failed. Make sure the local server is running:\n  cd server && npm run dev');
     }
   };
 
