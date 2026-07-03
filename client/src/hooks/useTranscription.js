@@ -1,48 +1,48 @@
 import { useEditorStore } from '../store/useEditorStore';
 import { useProjectStore } from '../store/useProjectStore';
+import { getApiBase } from '../utils/apiConfig';
 
 export function useTranscription() {
-    // 1. PULL IN THE MISSING SETTER
     const { setTranscription, setIsProcessing, setServerVideoFilename, bakeTimeline } = useEditorStore();
 
     const uploadAndTranscribe = async (file) => {
         setIsProcessing(true);
-        
+
+        const apiBase = getApiBase();
+        console.log(`[Upload] Using API: ${apiBase}`);
+
         try {
             const formData = new FormData();
             formData.append('video', file);
 
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/upload`, {
+            const response = await fetch(`${apiBase}/upload`, {
                 method: 'POST',
                 body: formData
             });
 
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`Server error ${response.status}: ${text.slice(0, 200)}`);
+            }
+
             const result = await response.json();
 
             if (result.success) {
-                // 2. Save the AI transcript
                 setTranscription(result.data, result.aiHighlights);
-
-                // 3. Build caption blocks immediately so export works from any page
                 bakeTimeline();
-
-                // 4. THE CRITICAL FIX: Save the exact name the server generated!
                 if (result.originalFileName) {
                     setServerVideoFilename(result.originalFileName);
                 }
-
-                // Track this session in My Edits
                 useProjectStore.getState().addEdit(file.name);
-
                 setIsProcessing(false);
                 return true;
             } else {
-                throw new Error(result.error || "Upload failed");
+                throw new Error(result.error || 'Upload failed');
             }
         } catch (error) {
-            console.error("Transcription Error:", error);
+            console.error('[Upload] Failed:', error.message);
             setIsProcessing(false);
-            return false;
+            return error.message;   // return the real message so callers can show it
         }
     };
 

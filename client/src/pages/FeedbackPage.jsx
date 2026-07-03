@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MessageSquare, Sparkles, Send, ArrowRight, ImagePlus, X, Paperclip } from 'lucide-react';
 import Footer from '../components/common/Footer';
+import { getApiBase } from '../utils/apiConfig';
 
 export default function FeedbackPage() {
   const [formData, setFormData] = useState({
@@ -27,7 +28,7 @@ export default function FeedbackPage() {
 
     try {
       // 2. Send to your Node.js backend
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/feedback`, {
+      const response = await fetch(`${getApiBase()}/feedback`, {
         method: 'POST',
         body: submitData, // Notice: No 'Content-Type' header! Browser sets it automatically for FormData
       });

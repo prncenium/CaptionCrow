@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Download, Film, Play, Cloud, Cpu, HardDrive, RotateCcw } from 'lucide-react';
-import { useEditorStore } from '../../store/useEditorStore';  
+import { useEditorStore } from '../../store/useEditorStore';
+import { getApiBase } from '../../utils/apiConfig';
 
 export default function RenderProgress() {
     const { videoFile, videoUrl, serverVideoFilename, timelineBlocks, globalLineOffsets, activeStyle, lineStyles } = useEditorStore();
@@ -51,7 +52,7 @@ export default function RenderProgress() {
         }, 800); // Updates every 800 milliseconds
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/export`, {
+            const response = await fetch(`${getApiBase()}/export`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: bodyPayload

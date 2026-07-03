@@ -3,6 +3,7 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles, AlertCircle, Check
 import { useNavigate } from 'react-router-dom';
 import Footer from '../components/common/Footer';
 import { useAuthStore } from '../store/useAuthStore';
+import { getApiBase } from '../utils/apiConfig';
 
 const LOGO = 'https://res.cloudinary.com/dbtfi1rbi/image/upload/v1780233993/Gemini_Generated_Image_ux5ru8ux5ru8ux5r_1_zlv7on.png';
 
@@ -55,7 +56,7 @@ export default function LoginPage() {
 
         setIsLoading(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/login`, {
+            const res = await fetch(`${getApiBase()}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: siEmail.trim(), password: siPass }),
@@ -84,7 +85,7 @@ export default function LoginPage() {
 
         setIsLoading(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/register`, {
+            const res = await fetch(`${getApiBase()}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: suName.trim(), email: suEmail.trim(), password: suPass }),

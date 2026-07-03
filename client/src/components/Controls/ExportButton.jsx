@@ -3,6 +3,7 @@ import { Loader2, Download } from 'lucide-react';
 import { useEditorStore } from '../../store/useEditorStore';
 import axios from 'axios';
 import { measureTextWidth } from '../../utils/canvasHelper';
+import { getApiBase } from '../../utils/apiConfig';
 
 export default function ExportButton() {
     const [isExporting, setIsExporting] = useState(false);
@@ -130,7 +131,7 @@ export default function ExportButton() {
     'FINAL EXPORT BLOCKS:',
     JSON.stringify(enrichedBlocks, null, 2)
 );
-            const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/export`, {
+            const response = await axios.post(`${getApiBase()}/export`, {
                 filename: serverVideoFilename,
                 timelineBlocks: enrichedBlocks, 
                 globalLineOffsets: globalLineOffsets,

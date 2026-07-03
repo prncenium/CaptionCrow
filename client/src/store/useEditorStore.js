@@ -3,6 +3,7 @@ import { groupCaptions } from '../utils/captionChunker';
 import { PRESET_STYLES } from '../utils/presetStyles';
 import { filterMinimalistHighlights } from '../utils/minimalistHighlightFilter';
 import { useProjectStore } from './useProjectStore';
+import { getApiBase } from '../utils/apiConfig';
 
 export const useEditorStore = create((set, get) => ({
     // --- Media State ---
@@ -324,7 +325,7 @@ applyPreset: (presetId) => {
         const fullText = state.transcription.map(w => w.word || w.text || '').filter(Boolean).join(' ');
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/refresh-highlights`, {
+            const response = await fetch(`${getApiBase()}/refresh-highlights`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ transcriptText: fullText })
