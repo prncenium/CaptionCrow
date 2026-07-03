@@ -18,11 +18,17 @@ export const processVideoUpload = async (req, res, next) => {
         const rawHindiWords = await transcribeAudioWordLevel(audioPath);
 
         // Step 3: Translate Hindi -> Hinglish
-        const hinglishWords = await convertToHinglish(rawHindiWords);
+        let hinglishWords = await convertToHinglish(rawHindiWords);
+
+        // Guard: if converter returned empty words, use the raw Whisper output
+        const hasText = hinglishWords.some(w => (w.word || w.text || '').trim());
+        if (!hasText) {
+            console.warn('[Upload] Hinglish converter returned empty words — falling back to raw transcription');
+            hinglishWords = rawHindiWords.map(w => ({ ...w, word: (w.word || w.text || '').toLowerCase().trim() }));
+        }
 
         // 👇 NEW STEP 4: The Intelligence Layer 👇
-        // Combine all the words into a single paragraph for LLaMA to read
-        const fullTranscriptText = hinglishWords.map(w => w.word || w.text).join(' ');
+        const fullTranscriptText = hinglishWords.map(w => (w.word || w.text || '').trim()).filter(Boolean).join(' ');
         
         // Ask LLaMA to find the important nouns, names, and verbs
         const highlightedWords = await analyzeTranscriptForHighlights(fullTranscriptText);

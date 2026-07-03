@@ -49,13 +49,37 @@ export const convertToHinglish = async (transcriptionArray, maxRetries = 3) => {
                 finalArray = firstArrayKey ? parsedResponse[firstArrayKey] : transcriptionArray;
             }
             
-            // 👇 FORCE STRICT LOWERCASE ON EVERY SINGLE WORD 👇
-            finalArray = finalArray.map(wordObj => ({
-                ...wordObj,
-                word: (wordObj.word || wordObj.text || "").toLowerCase()
-            }));
+            // Normalise: ensure every item has a non-empty `word` property.
+            // If the AI omitted or emptied it, fall back to the original word at that index.
+            finalArray = finalArray.map((wordObj, idx) => {
+                const aiWord = (wordObj.word || wordObj.text || "").toLowerCase().trim();
+                const origWord = (transcriptionArray[idx]?.word || transcriptionArray[idx]?.text || "").toLowerCase().trim();
+                return {
+                    ...transcriptionArray[idx], // keep original start/end/structure
+                    ...wordObj,
+                    word: aiWord || origWord,   // never allow empty
+                };
+            });
 
-            console.log(`✅ [Groq] SUCCESS on attempt ${attempt}!`);
+            // If AI returned fewer items than input, append missing originals
+            if (finalArray.length < transcriptionArray.length) {
+                for (let i = finalArray.length; i < transcriptionArray.length; i++) {
+                    const orig = transcriptionArray[i];
+                    finalArray.push({ ...orig, word: (orig.word || orig.text || "").toLowerCase().trim() });
+                }
+            }
+
+            // Safety-net: if >50% of words are still empty, discard AI output and use originals
+            const emptyCount = finalArray.filter(w => !w.word).length;
+            if (emptyCount > finalArray.length * 0.5) {
+                console.warn(`⚠️ [Groq] AI returned ${emptyCount}/${finalArray.length} empty words — using original transcription`);
+                finalArray = transcriptionArray.map(orig => ({
+                    ...orig,
+                    word: (orig.word || orig.text || "").toLowerCase().trim()
+                }));
+            }
+
+            console.log(`✅ [Groq] SUCCESS on attempt ${attempt}! Words: ${finalArray.length}`);
             console.log(`-----------------------------------------\n`);
             return finalArray;
 
