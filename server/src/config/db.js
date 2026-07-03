@@ -6,6 +6,8 @@ export const connectDB = async () => {
         console.log(`[MongoDB] Connected: ${conn.connection.host}`);
     } catch (error) {
         console.error(`[MongoDB] Connection Error: ${error.message}`);
-        process.exit(1);
+        // Don't crash — upload/export/transcription routes work without MongoDB.
+        // Only auth routes (login/register) need the DB.
+        console.warn('[MongoDB] Server starting without database — auth routes will be unavailable');
     }
 };
