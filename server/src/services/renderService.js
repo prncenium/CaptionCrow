@@ -9,28 +9,33 @@ const __dirname = path.dirname(__filename);
 // Always point fluent-ffmpeg at the bundled binary (works on all platforms)
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
-// ── Probe original video for bitrate ────────────────────────────────────────
+// ── Probe original video for bitrate + resolution ───────────────────────────
 const probeVideo = (videoPath) =>
   new Promise((resolve) => {
     ffmpeg.ffprobe(videoPath, (err, metadata) => {
       if (err) {
         console.warn('[FFprobe] Could not probe video, falling back to CRF mode:', err.message);
-        resolve({ bitrate: 0 });
+        resolve({ bitrate: 0, width: 0, height: 0 });
         return;
       }
       const vStream = metadata.streams?.find((s) => s.codec_type === 'video');
       // Prefer stream-level bitrate; fall back to container-level
       const bitrate = parseInt(vStream?.bit_rate || metadata.format?.bit_rate || 0, 10);
-      console.log(`[FFprobe] Detected video bitrate: ${Math.round(bitrate / 1000)} kbps`);
-      resolve({ bitrate });
+      const width = parseInt(vStream?.width || 0, 10);
+      const height = parseInt(vStream?.height || 0, 10);
+      console.log(`[FFprobe] Detected video bitrate: ${Math.round(bitrate / 1000)} kbps, resolution: ${width}x${height}`);
+      resolve({ bitrate, width, height });
     });
   });
 
 // ── Main render function ─────────────────────────────────────────────────────
 export const burnSubtitles = async (inputVideoPath, assFilePath, outputVideoPath) => {
 
-  // 1. Detect the original video's bitrate
-  const { bitrate } = await probeVideo(inputVideoPath);
+  // 1. Detect the original video's bitrate + resolution
+  const { bitrate, width, height } = await probeVideo(inputVideoPath);
+  if (width > 0 && height > 0) {
+    console.log(`[Render] Preserving native input resolution: ${width}x${height} (no downscale — e.g. 4K in stays 4K out).`);
+  }
 
   // 2. Build encoding options that match original quality
   //    If probe succeeded → use the exact bitrate (same quality, similar file size)
@@ -64,6 +69,10 @@ export const burnSubtitles = async (inputVideoPath, assFilePath, outputVideoPath
   return new Promise((resolve, reject) => {
     ffmpeg(inputVideoPath)
       .videoFilters([
+        // Explicit no-op scale (output = input pixel dimensions) so the encode
+        // resolution is a guaranteed match to the source, not just "whatever
+        // ffmpeg defaults to" — a 4K input must stay 4K, never get downscaled.
+        'scale=iw:ih',
         // Keep original frame rate — do NOT force fps=60 (doubles file size)
         'format=yuv420p',
         `ass='${escapedAssPath}':fontsdir='${fontsDir}'`,

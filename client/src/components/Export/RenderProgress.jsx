@@ -8,7 +8,30 @@ export default function RenderProgress() {
     
     const [renderStatus, setRenderStatus] = useState('idle');
     const [progress, setProgress] = useState(0);
-    const [finalUrl, setFinalUrl] = useState(null); 
+    const [finalUrl, setFinalUrl] = useState(null);
+
+    // The `download` attribute on an <a> is ignored by browsers when the URL is
+    // cross-origin (the server runs on a different host/port than the client),
+    // so it just opens the video in a new tab instead of downloading it. Fetching
+    // it as a blob first and downloading that (a same-origin blob: URL) works
+    // regardless of origin, without affecting the new-tab open behavior.
+    const triggerDownload = async (url, filename) => {
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Download fetch failed (${res.status})`);
+            const blob = await res.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('[Download] Auto-download failed (the new tab is still available):', error);
+        }
+    };
 
     const startRender = async () => {
         if (!videoFile || !serverVideoFilename) {
@@ -85,14 +108,17 @@ export default function RenderProgress() {
             setProgress(100);
             setRenderStatus('complete');
 
-            // Trigger actual file download
+            // Open the rendered video in a new tab (unchanged behavior)
             const link = document.createElement('a');
             link.href = data.downloadUrl;
-            link.target = '_blank'; 
+            link.target = '_blank';
             link.setAttribute('download', `CaptionForge_Final_${videoFile.name}`);
             document.body.appendChild(link);
             link.click();
             link.remove();
+
+            // Also force a real file download (see triggerDownload comment above)
+            triggerDownload(data.downloadUrl, `CaptionForge_Final_${videoFile.name}`);
 
         } catch (error) {
             // 🚨 Stop the interval if an error occurs! 🚨
@@ -195,10 +221,11 @@ export default function RenderProgress() {
                         
                         <div className="flex gap-2 mt-6">
                             {finalUrl && (
-                                <a 
-                                    href={finalUrl} 
-                                    target="_blank" 
+                                <a
+                                    href={finalUrl}
+                                    target="_blank"
                                     rel="noreferrer"
+                                    onClick={() => triggerDownload(finalUrl, `CaptionForge_Final_${videoFile.name}`)}
                                     className="px-5 py-2.5 bg-[#34C759] text-white rounded-xl text-[13px] font-semibold flex items-center gap-2 hover:bg-[#2db84e] shadow-[0_4px_14px_rgba(52,199,89,0.35)] transition-all active:scale-95"
                                 >
                                     <Download size={14} strokeWidth={2.25} /> Download MP4
