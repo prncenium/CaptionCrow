@@ -13,9 +13,10 @@ export const groupCaptions = (words, maxChars, maxLines) => {
 
         for (let i = 0; i < words.length; i++) {
             const wordObj = words[i];
+            if (!wordObj) continue;
             if (currentStart === null) currentStart = wordObj.start;
 
-            currentStack.push(wordObj.word.trim());
+            currentStack.push((wordObj.word || wordObj.text || '').trim());
             currentStackObj.push(wordObj); // 🚨 Save the object
 
             if (currentStack.length === 3 || i === words.length - 1) {
@@ -44,8 +45,10 @@ export const groupCaptions = (words, maxChars, maxLines) => {
 
     for (let i = 0; i < words.length; i++) {
         const wordObj = words[i];
-        const wordText = wordObj.word.trim();
-        
+        if (!wordObj) continue;
+        const wordText = (wordObj.word || wordObj.text || '').trim();
+        if (!wordText) continue;
+
         if (currentStart === null) currentStart = wordObj.start;
 
         const currentLineString = currentLineWords.join(" ");

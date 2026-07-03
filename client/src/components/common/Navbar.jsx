@@ -1,8 +1,12 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { Home, Scissors, Folder, CreditCard, MessageSquareWarning, Film, LogIn } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Home, Scissors, Folder, CreditCard, MessageSquareWarning, Film, LogIn, LogOut, User } from 'lucide-react';
+import { useAuthStore } from '../../store/useAuthStore';
 
 export default function Navbar() {
+  const navigate = useNavigate();
+  const { isAuthenticated, user, logoutUser } = useAuthStore();
+
   const navItems = [
     { name: 'Upload',   path: '/',          icon: Home },
     { name: 'Editor',  path: '/editor',     icon: Scissors },
@@ -10,6 +14,11 @@ export default function Navbar() {
     { name: 'My Edits', path: '/my-edits', icon: Film },
     { name: 'Billing', path: '/billing',    icon: CreditCard },
   ];
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate('/');
+  };
 
   return (
     <div className="px-4 pt-2 shrink-0 select-none z-50 relative">
@@ -65,20 +74,38 @@ export default function Navbar() {
           </NavLink>
         </nav>
 
-        {/* Right: Sign In */}
-        <NavLink
-          to="/login"
-          className={({ isActive }) =>
-            `flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-bold transition-all duration-200 ${
-              isActive
-                ? 'bg-accent text-white shadow-[0_2px_8px_rgba(0,122,255,0.35)]'
-                : 'bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20'
-            }`
-          }
-        >
-          <LogIn size={12} strokeWidth={2.5} />
-          Sign In
-        </NavLink>
+        {/* Right: Auth */}
+        {isAuthenticated && user ? (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/50 border border-white/60">
+              <div className="w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center">
+                <User size={11} className="text-accent" strokeWidth={2.5} />
+              </div>
+              <span className="text-[12px] font-semibold text-slate-700 max-w-[90px] truncate">{user.name}</span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-bold text-slate-500 hover:text-red-500 hover:bg-red-50/60 transition-all duration-200 border border-transparent hover:border-red-200/50"
+            >
+              <LogOut size={12} strokeWidth={2.5} />
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <NavLink
+            to="/login"
+            className={({ isActive }) =>
+              `flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-bold transition-all duration-200 ${
+                isActive
+                  ? 'bg-accent text-white shadow-[0_2px_8px_rgba(0,122,255,0.35)]'
+                  : 'bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20'
+              }`
+            }
+          >
+            <LogIn size={12} strokeWidth={2.5} />
+            Sign In
+          </NavLink>
+        )}
 
       </header>
     </div>

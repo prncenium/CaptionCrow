@@ -168,7 +168,7 @@ lines.forEach((_, index) => {
                                     let totalLineWidth = 0;
                                     const wordWidths = words.map(w => {
                                         // 🚨 CHECK AI HIGHLIGHTS
-                                        const cleanWord = w.toLowerCase().replace(/[^\w]/g, '');
+                                        const cleanWord = w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
                                         const isHighlighted = aiHighlights?.includes(cleanWord);
                                         
                                         // Determine specific font size/weight for this word
@@ -196,7 +196,7 @@ context.font = `${measureStyle} ${measureWeight} ${wSize}px "${measureFamily}"`;
                                     const mainNodes = [];
 
                                     words.forEach((word, wordIndex) => {
-                                        const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
+                                        const cleanWord = word.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
                                         const isHighlighted = aiHighlights?.includes(cleanWord);
 
                                         const wordStyle = {

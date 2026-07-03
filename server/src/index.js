@@ -8,6 +8,7 @@ import path from 'path';
 import { connectDB } from './config/db.js';
 import apiRoutes from './routes/apiRoutes.js';
 import projectRoutes from './routes/projectRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 // Initialize environment variables
@@ -56,6 +57,9 @@ app.use('/api', apiRoutes);
 
 // Mount the project and audio extraction endpoints
 app.use('/api/projects', projectRoutes);
+
+// Mount auth endpoints
+app.use('/api/auth', authRoutes);
 
 // Global Error Handler (Must be last)
 app.use(errorHandler);
