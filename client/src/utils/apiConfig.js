@@ -1,13 +1,11 @@
-// Resolves API base URL at runtime (not build time).
-// Priority: window.__VARTA_API__ (public/api-config.js) → VITE env var → hardcoded fallback
+// In dev mode: relative /api goes through Vite proxy → localhost:5000 (local server)
+// In production build: use window.__VARTA_API__ set by public/api-config.js → Render URL
 export function getApiBase() {
+    if (import.meta.env.DEV) {
+        return '/api';
+    }
     if (typeof window !== 'undefined' && window.__VARTA_API__) {
         return window.__VARTA_API__;
     }
-    const envUrl = import.meta.env.VITE_API_BASE_URL;
-    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
-        return envUrl;
-    }
-    // Ultimate fallback — never breaks regardless of env var state
     return 'https://captioncrow-1.onrender.com/api';
 }

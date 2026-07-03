@@ -13,9 +13,8 @@ export default defineConfig({
     // cross-origin request — eliminates CORS issues on any localhost port.
     proxy: {
       '/api': {
-        target: 'https://captioncrow-1.onrender.com',
+        target: 'http://localhost:5000',
         changeOrigin: true,
-        secure: true,
       }
     }
   }
