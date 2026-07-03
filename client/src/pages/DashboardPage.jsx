@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Gauge, CheckCircle2, Sparkles, Loader2, ArrowRight, CloudUpload, SlidersHorizontal, Download, Layers, Globe, Lock } from 'lucide-react';
 
 const COMING_SOON_IMG = 'https://res.cloudinary.com/dbtfi1rbi/image/upload/v1781002253/Screenshot_2026-06-09_161355_xph2fq.png';
@@ -16,6 +16,13 @@ import ProcessingModal from '../components/common/ProcessingModal';
 export default function DashboardPage() {
   const [activePreset, setActivePreset] = useState('slide-up');
   const [uploadModal, setUploadModal] = useState({ isOpen: false, presetId: null, presetName: '' });
+
+  // Wake up Render's free-tier server as soon as the dashboard loads
+  useEffect(() => {
+    import('../utils/apiConfig').then(({ getApiBase }) => {
+      fetch(`${getApiBase()}/healthz`).catch(() => {});
+    });
+  }, []);
   
   const navigate = useNavigate();
   const { applyPreset, setVideo, isProcessing } = useEditorStore();
@@ -39,16 +46,12 @@ export default function DashboardPage() {
       // This hook likely clears the slate. We wait for it to finish!
       const success = await uploadAndTranscribe(file);
       
-      if (success) {
-          // 🚨 FIX 2: Apply the preset AFTER transcription finishes to survive the reset!
+      if (success === true) {
           applyPreset(targetPresetId);
-          
-          // 🚨 FIX 3: Re-bake the timeline so the captions split correctly using the preset's math
           useEditorStore.getState().bakeTimeline();
-          
           navigate('/editor');
       } else {
-          alert('Transcription failed. Please check your server connection.');
+          alert('Transcription failed. The server may be waking up (free tier) — wait 30 seconds and try again.');
       }
   };
 

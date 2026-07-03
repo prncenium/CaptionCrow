@@ -25,8 +25,8 @@ export default function VideoDropzone() {
         setVideo(file, localVideoUrl);
 
         const success = await uploadAndTranscribe(file);
-        if (!success) {
-            alert('Failed to process video transcription. Please check your server connection.');
+        if (success !== true) {
+            alert('Transcription failed. The server may be waking up (free tier) — wait 30 seconds and try again.');
             return;
         }
 

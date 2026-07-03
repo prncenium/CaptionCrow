@@ -42,7 +42,7 @@ export function useTranscription() {
         } catch (error) {
             console.error('[Upload] Failed:', error.message);
             setIsProcessing(false);
-            return error.message;   // return the real message so callers can show it
+            return false;
         }
     };
 
