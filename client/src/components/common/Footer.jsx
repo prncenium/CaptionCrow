@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Sparkles, Globe, Code2, Mail } from 'lucide-react';
 
-const LOGO = 'https://res.cloudinary.com/dbtfi1rbi/image/upload/v1780233993/Gemini_Generated_Image_ux5ru8ux5ru8ux5r_1_zlv7on.png';
+const LOGO = 'https://res.cloudinary.com/dbtfi1rbi/image/upload/v1783089346/Gemini_Generated_Image_i1uzgxi1uzgxi1uz_vwlus1.png';
 
 const PRODUCT = [
   { label: 'Upload',   path: '/' },

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import Footer from '../components/common/Footer';
 import { useAuthStore } from '../store/useAuthStore';
 import { getApiBase } from '../utils/apiConfig';
 
-const LOGO = 'https://res.cloudinary.com/dbtfi1rbi/image/upload/v1780233993/Gemini_Generated_Image_ux5ru8ux5ru8ux5r_1_zlv7on.png';
+const LOGO = 'https://res.cloudinary.com/dbtfi1rbi/image/upload/v1783089346/Gemini_Generated_Image_i1uzgxi1uzgxi1uz_vwlus1.png';
 
 function InputField({ icon: Icon, type = 'text', placeholder, value, onChange, rightSlot, disabled }) {
     return (
@@ -29,6 +30,7 @@ function InputField({ icon: Icon, type = 'text', placeholder, value, onChange, r
 export default function LoginPage() {
     const navigate = useNavigate();
     const { loginUser } = useAuthStore();
+    const hiddenGoogleBtnRef = useRef(null);
 
     const [tab, setTab] = useState('signin');
     const [isLoading, setIsLoading] = useState(false);
@@ -105,6 +107,36 @@ export default function LoginPage() {
         }
     };
 
+    const handleGoogleSuccess = async (credentialResponse) => {
+        clearMessages();
+        setIsLoading(true);
+        try {
+            const res = await fetch(`${getApiBase()}/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: credentialResponse.credential }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                setError(data.message || 'Google sign-in failed.');
+            } else {
+                loginUser(data.user, data.token);
+                setSuccess(`Welcome, ${data.user.name}!`);
+                setTimeout(() => navigate('/'), 800);
+            }
+        } catch {
+            setError('Unable to connect to server. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // The real Google button is rendered off-screen; our styled button proxies
+    // a click to it so the UI matches the rest of the form instead of Google's stock button.
+    const handleGoogleButtonClick = () => {
+        hiddenGoogleBtnRef.current?.querySelector('div[role="button"]')?.click();
+    };
+
     const handleTabChange = (t) => { setTab(t); clearMessages(); };
 
     return (
@@ -115,7 +147,7 @@ export default function LoginPage() {
             <div className="fixed bottom-[-10%] right-[-10%] w-[450px] h-[450px] rounded-full bg-fuchsia-400/20 blur-[120px] pointer-events-none z-0" />
 
             {/* Card */}
-            <div className="w-full max-w-[420px] bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[32px] shadow-[0_8px_40px_rgba(120,80,200,0.10)] p-8 z-10 space-y-6">
+            <div className="relative w-full max-w-[420px] bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[32px] shadow-[0_8px_40px_rgba(120,80,200,0.10)] p-8 z-10 space-y-6">
 
                 {/* Brand */}
                 <div className="flex flex-col items-center gap-1.5 pb-1">
@@ -275,8 +307,19 @@ export default function LoginPage() {
                     <div className="flex-1 h-px bg-black/8" />
                 </div>
 
-                {/* Google button */}
-                <button className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl bg-white/60 border border-white/80 text-[13px] font-bold text-slate-700 hover:bg-white shadow-sm transition-all">
+                {/* Google button — visible custom-styled button proxies a click to the
+                    real (off-screen) Google button so the UI matches the rest of the form. */}
+                <div ref={hiddenGoogleBtnRef} className="absolute w-0 h-0 overflow-hidden opacity-0 pointer-events-none">
+                    <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => setError('Google sign-in failed. Please try again.')}
+                    />
+                </div>
+                <button
+                    onClick={handleGoogleButtonClick}
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl bg-white/60 border border-white/80 text-[13px] font-bold text-slate-700 hover:bg-white shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
                     <svg width="16" height="16" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
