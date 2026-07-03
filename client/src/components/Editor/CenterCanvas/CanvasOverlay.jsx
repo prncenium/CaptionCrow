@@ -123,8 +123,24 @@ export default function CanvasOverlay() {
                     {visibleBlocks.map((block) => {
                         const lines = block.text.split('\n');
 
+                        // 🚨 REVEAL COMPRESSION (Viral Slide Up only): when speech is fast, the fixed
+                        // stagger/anim timing for a 2-line card can outlast the block's actual duration —
+                        // Line 2's words never finish sliding/fading in before the block disappears.
+                        // Scale stagger delay + anim duration down so the FULL reveal (last word of the
+                        // LAST line reaching opacity 1) always fits inside block.end - block.start.
+                        const totalWordsInBlock = lines.reduce((sum, l) => sum + l.split(' ').filter(Boolean).length, 0);
+                        const blockDurationSec = Math.max(0.05, block.end - block.start);
+                        const baseStyleNormBlock = String(activeStyle.animationStyle || '').toLowerCase().replace(/\s+/g, '');
+                        const blockIsSlideStagger = !!activeStyle.wordStagger
+                            && baseStyleNormBlock.includes('slide') && !baseStyleNormBlock.includes('bounce');
+                        const requiredSecBlock = ((totalWordsInBlock - 1) * ((activeStyle.staggerDelayMs || 0) / 1000))
+                            + ((activeStyle.animationDurationMs || 300) / 1000);
+                        const revealScale = (blockIsSlideStagger && requiredSecBlock > blockDurationSec)
+                            ? Math.max(0.25, blockDurationSec / requiredSecBlock)
+                            : 1;
+
                         const LINE_HEIGHT_MULTIPLIER = 1.15;
-                        
+
                         let totalBlockHeight = 0;
 lines.forEach((_, index) => {
     const s = { ...activeStyle, ...(lineStyles[index] || {}), ...(block.styleOverrides?.[index] || {}) };
@@ -151,13 +167,20 @@ lines.forEach((_, index) => {
                                     };
                                     const animStyle = style.animationStyle || 'none';
                                     const motionBlurIntensity = (style.motionBlur || 0) / 100;
-                                    const animDuration = style.animationDurationMs || 300; 
-                                    
-                                    const STAGGER_DELAY = (style.staggerDelayMs || 0) / 1000;
+                                    const animDuration = (style.animationDurationMs || 300) * revealScale;
+
+                                    const STAGGER_DELAY = ((style.staggerDelayMs || 0) / 1000) * revealScale;
                                     const isWordStaggered = style.wordStagger ?? activeStyle.wordStagger;
                                     
-                                    const lineDelaySec =
-    isWordStaggered ? 0 : (index * STAGGER_DELAY);
+                                    // For slide+wordStagger, each line's GROUP should start sliding
+                                    // when its first word begins to appear (cumulativeWordCount * delay),
+                                    // not at block.start — otherwise Line 2+ finish sliding before their
+                                    // words are visible. Non-slide wordStagger (bounce/popin) keeps delay=0.
+                                    const styleNormLine = (animStyle || '').toLowerCase().replace(/\s+/g, '');
+                                    const isSlidingLine = styleNormLine.includes('slide') && !styleNormLine.includes('bounce');
+                                    const lineDelaySec = isWordStaggered
+                                        ? (isSlidingLine ? (cumulativeWordCount * STAGGER_DELAY) : 0)
+                                        : (index * STAGGER_DELAY);
                                     const lineStartTime = block.start + lineDelaySec;
                                     const lineAnimState = calculateAnimation(currentTime, lineStartTime, animStyle, { width: VIRTUAL_WIDTH, height: VIRTUAL_HEIGHT }, animDuration);
 

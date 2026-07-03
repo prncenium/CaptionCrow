@@ -129,6 +129,22 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
 
         timelineBlocks.forEach((block) => {
             const lines = block.text.split('\n');
+
+            // 🚨 REVEAL COMPRESSION (Viral Slide Up only): mirrors the same fix in CanvasOverlay.jsx.
+            // Fast speech can make a 2-line card's fixed stagger/anim timing outlast the block's real
+            // duration, so Line 2's words never finish sliding/fading in before the Dialogue event ends.
+            // Scale stagger delay + anim duration down so the full reveal fits inside block.end - block.start.
+            const totalWordsInBlock = lines.reduce((sum, l) => sum + l.split(' ').filter(Boolean).length, 0);
+            const blockDurationMs = Math.max(50, (block.end - block.start) * 1000);
+            const baseStyleNormBlock = String(activeStyle.animationStyle || '').toLowerCase().replace(/\s+/g, '');
+            const blockIsSlideStagger = (activeStyle.wordStagger === true || String(activeStyle.wordStagger) === 'true')
+                && baseStyleNormBlock.includes('slide') && !baseStyleNormBlock.includes('bounce');
+            const requiredMsBlock = ((totalWordsInBlock - 1) * parseNum(activeStyle.staggerDelayMs, 150))
+                + Math.max(parseNum(activeStyle.animationDurationMs, 300), 150);
+            const revealScale = (blockIsSlideStagger && requiredMsBlock > blockDurationMs)
+                ? Math.max(0.25, blockDurationMs / requiredMsBlock)
+                : 1;
+
             const LINE_HEIGHT_MULTIPLIER = 1.15;
             let totalBlockHeight = 0;
 
@@ -150,8 +166,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
                 const currentStyle = { ...activeStyle, ...(safeLineStyles[index] || {}), ...(block.styleOverrides?.[index] || {}) };
 
                 const animStyle = currentStyle.animationStyle || 'none';
-                const lineAnimSpeed = parseNum(currentStyle.animationDurationMs, 300);
-                const staggerDelayMs = parseNum(currentStyle.staggerDelayMs, 150);
+                const lineAnimSpeed = Math.max(60, Math.round(parseNum(currentStyle.animationDurationMs, 300) * revealScale));
+                const staggerDelayMs = Math.max(15, Math.round(parseNum(currentStyle.staggerDelayMs, 150) * revealScale));
                 const isWordStagger = currentStyle.wordStagger === true || String(currentStyle.wordStagger) === 'true';
 
                 const rawLineFontSize = lineSizes[index];
@@ -204,7 +220,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
                 const endStr = formatTime(block.end);
                 const baseTags = `\\an5\\bord${lStrokeWidth}\\fs${lineFontSizeScaled}${lBoldTag}${lItalicTag}\\fn${mappedFontFam}`;
 
-                const lineSlideStartTime = 0;
+                // For slide+wordStagger, delay each line's \move so it starts
+                // exactly when that line's first word fades in (cumulativeWordCount * staggerDelayMs).
+                // Without this, Line 2+ finish sliding before their words are visible.
+                const isSlidingExport = !['none', 'bounce', 'popin'].includes(normalizedStyle);
+                const lineSlideStartTime = (isWordStagger && isSlidingExport) ? (cumulativeWordCount * staggerDelayMs) : 0;
                 const lineSlideEndTime = lineSlideStartTime + lineAnimSpeed;
 
                 let basePos = '';
@@ -392,7 +412,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
                             }
 
                             const wordStartAnim = Math.round(cumulativeWordCount * staggerDelayMs);
-                            const wordEndAnim   = wordStartAnim + 150;
+                            const wordEndAnim   = wordStartAnim + Math.max(60, Math.round(150 * revealScale));
 
                             let wordColorHex = currentStyle.fillColor;
                             let wordSizeScaled = lineFontSizeScaled;

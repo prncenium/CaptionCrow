@@ -9,10 +9,12 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
-    // Proxy /api/* requests to the Render backend so the browser never sees a
+    // Proxy /api/* requests to the local Express server so the browser never sees a
     // cross-origin request — eliminates CORS issues on any localhost port.
+    // Regex (leading '^') so it only matches "/api/..." and NOT "/api-config.js",
+    // which must be served as a static file from public/ instead.
     proxy: {
-      '/api': {
+      '^/api/': {
         target: 'http://localhost:5000',
         changeOrigin: true,
       }
