@@ -8,4 +8,15 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    // Proxy /api/* requests to the Render backend so the browser never sees a
+    // cross-origin request — eliminates CORS issues on any localhost port.
+    proxy: {
+      '/api': {
+        target: 'https://captioncrow-1.onrender.com',
+        changeOrigin: true,
+        secure: true,
+      }
+    }
+  }
 })

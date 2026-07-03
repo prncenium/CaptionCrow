@@ -22,14 +22,16 @@ connectDB();
 
 // Core Middlewares
 const allowedOrigins = [
-    'http://localhost:5173',
     process.env.CLIENT_URL,           // set this in Render dashboard
 ].filter(Boolean);
 
 app.use(cors({
     origin: (origin, callback) => {
         // allow requests with no origin (Postman, curl, server-to-server)
-        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        if (!origin) return callback(null, true);
+        // allow any localhost port for local development
+        if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
         callback(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,
