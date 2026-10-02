@@ -25,15 +25,31 @@ export default function VideoPlayer() {
         const video = videoRef.current;
         if (!video) return;
 
+        // If isPlaying flips again (e.g. several rapid edits triggering re-renders)
+        // before this play() settles, `cancelled` stops us from acting on a stale
+        // promise — and every play() call below is caught so an expected
+        // AbortError (pause() interrupting play()) never surfaces as an uncaught
+        // rejection in the console.
+        let cancelled = false;
+
         if (isPlaying) {
-            video.play().catch(() => {
-                video.muted = true;
-                setIsMuted(true);
-                video.play();
+            video.play().catch((err) => {
+                if (cancelled) return;
+                if (err.name === 'NotAllowedError') {
+                    video.muted = true;
+                    setIsMuted(true);
+                    video.play().catch(() => {});
+                } else if (err.name !== 'AbortError') {
+                    console.error('[VideoPlayer] play() failed:', err);
+                }
             });
         } else {
             video.pause();
         }
+
+        return () => {
+            cancelled = true;
+        };
     }, [isPlaying]);
 
     // 3. PERFORMANCE LOOP (60FPS)

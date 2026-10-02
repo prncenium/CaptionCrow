@@ -11,14 +11,14 @@ import PresetUploadModal from '../components/common/PresetUploadModal';
 import ProcessingModal from '../components/common/ProcessingModal';
 import Footer from '../components/common/Footer';
 
-const DEFAULT_VIDEO    = 'https://res.cloudinary.com/dbtfi1rbi/video/upload/v1780226923/exported_1780226314943_ucsg6e.mp4';
-const COMING_SOON_IMG  = 'https://res.cloudinary.com/dbtfi1rbi/image/upload/v1781002253/Screenshot_2026-06-09_161355_xph2fq.png';
+const DEFAULT_VIDEO    = 'https://res.cloudinary.com/xjo36sha/video/upload/v1790937799/exported_1780230132375_or32z1.mp4';
+const COMING_SOON_IMG  = 'https://res.cloudinary.com/xjo36sha/image/upload/v1790937791/Screenshot_2026-06-09_161355_xph2fq.png';
 
 const presets = [
-  { id: 'slide-up',   title: 'Viral Slide Up',  desc: 'Poppins bold with dynamic slide physics.',  previewTop: 'VIRAL',  previewBottom: 'SLIDE',   active: true,  video: 'https://res.cloudinary.com/dbtfi1rbi/video/upload/v1780230249/sample_video_viral_slideup_cpduwk.mp4' },
-  { id: 'cinematic',  title: 'Cinematic',        desc: 'Elegant lower-thirds with soft tracking.',  previewTop: 'QUIET',  previewBottom: 'REVEAL',  active: true,  video: 'https://res.cloudinary.com/dbtfi1rbi/video/upload/v1780917321/sample_website_video_box_caption-_rxlwuo.mp4' },
+  { id: 'slide-up',   title: 'Viral Slide Up',  desc: 'Poppins bold with dynamic slide physics.',  previewTop: 'VIRAL',  previewBottom: 'SLIDE',   active: true,  video: 'https://res.cloudinary.com/xjo36sha/video/upload/v1790938829/sample_video_viral_slideup_cpduwk.mp4' },
+  { id: 'cinematic',  title: 'Cinematic',        desc: 'Elegant lower-thirds with soft tracking.',  previewTop: 'QUIET',  previewBottom: 'REVEAL',  active: true,  video: 'https://res.cloudinary.com/xjo36sha/video/upload/v1790938819/sample_website_video_box_caption-_rxlwuo.mp4' },
   { id: 'neon',       title: 'Creator Neon',     desc: 'High-contrast stream-ready emphasis.',       previewTop: 'WAIT',   previewBottom: 'FOR IT',  active: false, video: DEFAULT_VIDEO },
-  { id: 'minimalist', title: 'Minimalist',       desc: 'Clean captions for training & webinars.',    previewTop: 'CLEAR',  previewBottom: 'CUT',     active: true,  video: 'https://res.cloudinary.com/dbtfi1rbi/video/upload/v1780917318/sample_website_video_minimalist_s2lo9f.mp4' },
+  { id: 'minimalist', title: 'Minimalist',       desc: 'Clean captions for training & webinars.',    previewTop: 'CLEAR',  previewBottom: 'CUT',     active: true,  video: 'https://res.cloudinary.com/xjo36sha/video/upload/v1790938816/sample_website_video_minimalist_s2lo9f.mp4' },
   { id: 'glitch',     title: 'Glitch Effect',    desc: 'Cyberpunk-style fast transitions.',          previewTop: 'NEXT',   previewBottom: 'DROP',    active: false, video: DEFAULT_VIDEO },
   { id: 'karaoke',    title: 'Karaoke Bounce',   desc: 'Word-by-word highlight bounce.',             previewTop: 'STAY',   previewBottom: 'TUNED',   active: false, video: DEFAULT_VIDEO },
 ];

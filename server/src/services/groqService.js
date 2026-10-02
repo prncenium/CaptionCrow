@@ -71,3 +71,48 @@ Return ONLY a plain JSON array of unique lowercase strings. No explanation. No m
         return []; // Return empty array so the app doesn't crash
     }
 };
+
+// 🚨 NEW: The AI Intelligence Layer that finds natural phrase/sentence boundaries,
+// so caption cards break where a person would naturally pause instead of at a raw
+// character-count cutoff — and flags which phrases complete a full sentence/thought
+// (used to decide whether a Viral Slide Up card needs a second line at all).
+export const analyzeTranscriptForChunking = async (fullText) => {
+    const systemPrompt = `You are an expert short-form video caption editor. Split the transcript into natural spoken phrases — the same way a person would pause while speaking, or how you'd break a sentence into readable caption chunks.
+
+RULES:
+- Preserve every word EXACTLY as given, in the same order. Do not add, remove, reword, fix spelling, or fix grammar.
+- Break at natural grammatical boundaries: end of a clause, end of a sentence, before a conjunction that starts a new thought, after a comma pause, etc.
+- Each phrase should typically be 2-8 words. Never exceed ~10 words in one phrase.
+- For each phrase, set "sentenceEnd": true if it completes a full sentence or a complete standalone thought (a natural full stop, or a strong comma pause after a complete clause). Set "sentenceEnd": false if the phrase is a fragment or setup that naturally continues into the next phrase as part of the same sentence.
+
+Return ONLY a JSON array of objects, covering the ENTIRE transcript with no words skipped or duplicated. No explanation. No markdown.
+Example: [{"text": "so I built this app", "sentenceEnd": false}, {"text": "and it made me six figures", "sentenceEnd": true}]`;
+
+    try {
+        const response = await groq.chat.completions.create({
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: `Transcript: ${fullText}` }
+            ],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.2,
+        });
+
+        const content = response.choices[0].message.content.trim();
+        console.log("🤖 RAW CHUNKING OUTPUT:", content);
+
+        // Failsafe regex to grab just the array in case LLaMA adds text
+        const jsonArrayMatch = content.match(/\[.*\]/s);
+        if (jsonArrayMatch) {
+            const parsedArray = JSON.parse(jsonArrayMatch[0]);
+            console.log("✅ PARSED PHRASE BREAKS:", parsedArray);
+            return parsedArray;
+        }
+
+        console.log("⚠️ NO JSON ARRAY MATCHED FOR CHUNKING");
+        return [];
+    } catch (error) {
+        console.error("AI Chunking Analysis Failed:", error);
+        return []; // Return empty array so chunking falls back to the mechanical char-count logic
+    }
+};

@@ -28,12 +28,30 @@ export function useTranscription() {
             const result = await response.json();
 
             if (result.success) {
-                setTranscription(result.data, result.aiHighlights);
+                setTranscription(result.data, result.aiHighlights, result.aiPhraseBreaks);
                 bakeTimeline();
                 if (result.originalFileName) {
                     setServerVideoFilename(result.originalFileName);
                 }
-                useProjectStore.getState().addEdit(file.name);
+
+                // Save this as a resumable project if the user is logged in — silently
+                // does nothing when logged out (editing/exporting still works either way).
+                if (result.originalFileName) {
+                    const editorState = useEditorStore.getState();
+                    useProjectStore.getState().createProject({
+                        videoFilename: result.originalFileName,
+                        videoName: file.name,
+                        transcription: editorState.transcription,
+                        timelineBlocks: editorState.timelineBlocks,
+                        activeStyle: editorState.activeStyle,
+                        lineStyles: editorState.lineStyles,
+                        globalLineOffsets: editorState.globalLineOffsets,
+                        aiHighlights: editorState.aiHighlights,
+                        rawAiHighlights: editorState.rawAiHighlights,
+                        aiPhraseBreaks: editorState.aiPhraseBreaks,
+                    });
+                }
+
                 setIsProcessing(false);
                 return true;
             } else {

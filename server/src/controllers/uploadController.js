@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import { extractOptimizedAudio } from '../services/ffmpegService.js';
 // 🚨 IMPORT ADDED: Bring in the AI Intelligence analyzer
-import { transcribeAudioWordLevel, analyzeTranscriptForHighlights } from '../services/groqService.js';
+import { transcribeAudioWordLevel, analyzeTranscriptForHighlights, analyzeTranscriptForChunking } from '../services/groqService.js';
 import { convertToHinglish } from '../utils/hinglishConverter.js';
 
 export const processVideoUpload = async (req, res, next) => {
@@ -33,13 +33,17 @@ export const processVideoUpload = async (req, res, next) => {
         // Ask LLaMA to find the important nouns, names, and verbs
         const highlightedWords = await analyzeTranscriptForHighlights(fullTranscriptText);
 
+        // Ask LLaMA to find natural phrase/sentence breaks + punchline-worthy phrases
+        const phraseBreaks = await analyzeTranscriptForChunking(fullTranscriptText);
+
         // Step 5: Respond instantly to the frontend
-        res.status(200).json({ 
-            success: true, 
-            data: hinglishWords, 
+        res.status(200).json({
+            success: true,
+            data: hinglishWords,
             originalFileName: req.file.filename,
             // 👇 CRITICAL ADDITION: Send the highlighted words array back to React
-            aiHighlights: highlightedWords 
+            aiHighlights: highlightedWords,
+            aiPhraseBreaks: phraseBreaks
         });
     } catch (error) {
         next(error); 

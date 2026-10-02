@@ -1,6 +1,9 @@
-import React from 'react';
-import { Film, Trash2, Clapperboard } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Film, Trash2, Clapperboard, LogIn, Loader2 } from 'lucide-react';
 import { useProjectStore } from '../store/useProjectStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { useEditorStore } from '../store/useEditorStore';
 import Footer from '../components/common/Footer';
 
 const PRESET_LABELS = {
@@ -23,13 +26,19 @@ function timeAgo(iso) {
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function EditCard({ edit, onDelete }) {
+function EditCard({ edit, onOpen, onDelete, isOpening }) {
     return (
-        <div className="group relative bg-white/30 backdrop-blur-xl border border-white/50 rounded-[24px] overflow-hidden hover:bg-white/40 hover:shadow-lg transition-all duration-200">
-
+        <div
+            onClick={() => onOpen(edit)}
+            className="group relative bg-white/30 backdrop-blur-xl border border-white/50 rounded-[24px] overflow-hidden hover:bg-white/40 hover:shadow-lg transition-all duration-200 cursor-pointer"
+        >
             {/* Thumbnail area */}
             <div className="relative h-36 bg-gradient-to-br from-slate-100/80 to-slate-200/60 flex items-center justify-center">
-                <Film size={40} className="text-slate-300" strokeWidth={1.5} />
+                {isOpening ? (
+                    <Loader2 size={28} className="text-slate-400 animate-spin" />
+                ) : (
+                    <Film size={40} className="text-slate-300" strokeWidth={1.5} />
+                )}
 
                 {/* Status badge */}
                 <span className={`absolute top-3 right-3 text-[9px] font-bold px-2 py-0.5 rounded-full border ${
@@ -42,7 +51,7 @@ function EditCard({ edit, onDelete }) {
 
                 {/* Delete button — visible on hover */}
                 <button
-                    onClick={() => onDelete(edit.id)}
+                    onClick={(e) => { e.stopPropagation(); onDelete(edit._id); }}
                     className="absolute top-3 left-3 w-6 h-6 flex items-center justify-center rounded-full bg-red-500/90 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                 >
                     <Trash2 size={11} />
@@ -54,10 +63,10 @@ function EditCard({ edit, onDelete }) {
                 <p className="text-[13px] font-bold text-slate-900 truncate" title={edit.videoName}>
                     {edit.videoName}
                 </p>
-                <p className="text-[11px] text-slate-400 font-medium">{timeAgo(edit.startedAt)}</p>
-                {edit.preset && (
+                <p className="text-[11px] text-slate-400 font-medium">{timeAgo(edit.updatedAt || edit.createdAt)}</p>
+                {edit.presetId && (
                     <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full bg-fuchsia-500/10 text-fuchsia-700 border border-fuchsia-500/20">
-                        {PRESET_LABELS[edit.preset] || edit.preset}
+                        {PRESET_LABELS[edit.presetId] || edit.presetId}
                     </span>
                 )}
             </div>
@@ -66,7 +75,28 @@ function EditCard({ edit, onDelete }) {
 }
 
 export default function MyEditsPage() {
-    const { edits, deleteEdit } = useProjectStore();
+    const navigate = useNavigate();
+    const { isAuthenticated } = useAuthStore();
+    const { edits, isLoadingEdits, fetchEdits, deleteEdit, fetchProject } = useProjectStore();
+    const { loadProject } = useEditorStore();
+    const [openingId, setOpeningId] = useState(null);
+
+    useEffect(() => {
+        if (isAuthenticated) fetchEdits();
+    }, [isAuthenticated, fetchEdits]);
+
+    const handleOpen = async (edit) => {
+        if (openingId) return;
+        setOpeningId(edit._id);
+        const project = await fetchProject(edit._id);
+        setOpeningId(null);
+        if (!project) {
+            alert('Could not load this edit. Please try again.');
+            return;
+        }
+        loadProject(project);
+        navigate('/editor');
+    };
 
     return (
         <>
@@ -88,18 +118,43 @@ export default function MyEditsPage() {
                                 Your editing history
                             </h1>
                             <p className="text-[14px] text-slate-500 font-medium mt-1">
-                                Videos you've uploaded and captioned on this device.
+                                {isAuthenticated
+                                    ? 'Videos you\'ve uploaded and captioned, saved to your account.'
+                                    : 'Sign in to save and revisit your edits from anywhere.'}
                             </p>
                         </div>
-                        {edits.length > 0 && (
+                        {isAuthenticated && edits.length > 0 && (
                             <span className="text-[12px] font-bold text-slate-400 mb-1">
                                 {edits.length} session{edits.length !== 1 ? 's' : ''}
                             </span>
                         )}
                     </div>
 
-                    {/* Empty state */}
-                    {edits.length === 0 ? (
+                    {/* Logged-out gate */}
+                    {!isAuthenticated ? (
+                        <div className="flex flex-col items-center justify-center py-28 text-center space-y-5">
+                            <div className="w-20 h-20 rounded-full bg-white/40 backdrop-blur-xl border border-white/60 flex items-center justify-center shadow-sm">
+                                <LogIn size={32} className="text-slate-300" strokeWidth={1.5} />
+                            </div>
+                            <div>
+                                <p className="text-[16px] font-bold text-slate-700">Sign in required</p>
+                                <p className="text-[13px] text-slate-400 font-medium mt-1 max-w-[320px]">
+                                    Your edit history is tied to your account. Sign in to see and reopen your past edits.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => navigate('/login')}
+                                className="px-5 py-2.5 bg-[#007AFF] text-white rounded-xl text-[13px] font-bold flex items-center gap-2 hover:bg-[#0066DD] transition-colors"
+                            >
+                                <LogIn size={14} /> Sign In
+                            </button>
+                        </div>
+                    ) : isLoadingEdits ? (
+                        <div className="flex flex-col items-center justify-center py-28 text-center gap-3">
+                            <Loader2 size={28} className="text-slate-400 animate-spin" />
+                            <p className="text-[13px] text-slate-400 font-medium">Loading your edits…</p>
+                        </div>
+                    ) : edits.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-28 text-center space-y-5">
                             <div className="w-20 h-20 rounded-full bg-white/40 backdrop-blur-xl border border-white/60 flex items-center justify-center shadow-sm">
                                 <Clapperboard size={32} className="text-slate-300" strokeWidth={1.5} />
@@ -115,7 +170,13 @@ export default function MyEditsPage() {
                         /* Edit cards grid */
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                             {edits.map(edit => (
-                                <EditCard key={edit.id} edit={edit} onDelete={deleteEdit} />
+                                <EditCard
+                                    key={edit._id}
+                                    edit={edit}
+                                    onOpen={handleOpen}
+                                    onDelete={deleteEdit}
+                                    isOpening={openingId === edit._id}
+                                />
                             ))}
                         </div>
                     )}

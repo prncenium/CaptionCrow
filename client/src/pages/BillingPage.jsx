@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { CreditCard, CheckCircle2, Zap, ShieldCheck } from 'lucide-react';
 import Footer from '../components/common/Footer';
 
-const CAT_IMAGE = 'https://res.cloudinary.com/dbtfi1rbi/image/upload/v1779236270/sad-cat-sad-cat-meme_x1dvkh.gif';
-const QR_IMAGE  = 'https://res.cloudinary.com/dbtfi1rbi/image/upload/v1780993919/Screenshot_2026-06-09_135847_aqdthn.png';
+const CAT_IMAGE = 'https://res.cloudinary.com/xjo36sha/image/upload/v1790937790/sad-cat-sad-cat-meme_x1dvkh.gif';
+const QR_IMAGE  = 'https://res.cloudinary.com/xjo36sha/image/upload/v1790937790/Screenshot_2026-06-09_135847_aqdthn.png';
 
 export default function BillingPage() {
   const [flipped, setFlipped] = useState(false);

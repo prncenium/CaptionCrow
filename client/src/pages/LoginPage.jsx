@@ -6,7 +6,7 @@ import Footer from '../components/common/Footer';
 import { useAuthStore } from '../store/useAuthStore';
 import { getApiBase } from '../utils/apiConfig';
 
-const LOGO = 'https://res.cloudinary.com/dbtfi1rbi/image/upload/v1783089346/Gemini_Generated_Image_i1uzgxi1uzgxi1uz_vwlus1.png';
+const LOGO = 'https://res.cloudinary.com/xjo36sha/image/upload/v1790937791/Gemini_Generated_Image_ux5ru8ux5ru8ux5r_1_zlv7on.png';
 
 function InputField({ icon: Icon, type = 'text', placeholder, value, onChange, rightSlot, disabled }) {
     return (

@@ -1,7 +1,7 @@
 import Project from '../models/Project.js';
 import { convertToHinglish } from '../utils/hinglishConverter.js';
 // 🚨 UPDATED IMPORT: Bring in the new analyzer
-import { transcribeAudioWordLevel, analyzeTranscriptForHighlights } from '../services/groqService.js';
+import { transcribeAudioWordLevel, analyzeTranscriptForHighlights, analyzeTranscriptForChunking } from '../services/groqService.js';
 import { extractOptimizedAudio } from '../services/ffmpegService.js';
 import fs from 'fs-extra';
 
@@ -10,12 +10,16 @@ export const regenerateTranscription = async (req, res, next) => {
 
     try {
         const project = await Project.findById(projectId);
-        
+
         if (!project) {
             return res.status(404).json({ success: false, error: 'Project not found.' });
         }
+        if (project.userId.toString() !== req.userId) {
+            return res.status(403).json({ success: false, error: 'You do not have access to this project.' });
+        }
 
-        if (!project.videoUrl || !(await fs.pathExists(project.videoUrl))) {
+        // videoUrl is a durable Cloudinary URL (not a local path) — ffmpeg reads it directly.
+        if (!project.videoUrl) {
             return res.status(400).json({ success: false, error: 'Source video file is missing.' });
         }
 
@@ -32,15 +36,19 @@ export const regenerateTranscription = async (req, res, next) => {
         // 👇 2. NEW: Get the smart highlights array 👇
         const highlightedWords = await analyzeTranscriptForHighlights(fullTranscriptText);
 
+        // 👇 NEW: Get natural phrase/sentence break points 👇
+        const phraseBreaks = await analyzeTranscriptForChunking(fullTranscriptText);
+
         project.transcription = finalHinglishTranscription;
         await project.save();
 
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             message: 'Transcription regenerated successfully.',
             data: finalHinglishTranscription,
             // 👇 3. NEW: Send the smart array back to the React frontend 👇
-            aiHighlights: highlightedWords 
+            aiHighlights: highlightedWords,
+            aiPhraseBreaks: phraseBreaks
         });
 
     } catch (error) {

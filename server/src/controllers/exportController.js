@@ -61,15 +61,21 @@ const mapFontFamily = (currentStyle) => {
     return fam || 'Poppins';
 };
 
+// Capitalizes just the first letter of a word, leaving the rest untouched —
+// so raw lowercase transcript words ("text") render as "Text" while words
+// already in a deliberate case ("AI") aren't mangled into "Ai".
+// Must match capitalizeWord in CanvasOverlay.jsx so preview and export agree.
+const capitalizeWord = (word) => word ? word.charAt(0).toUpperCase() + word.slice(1) : word;
+
 export const handleExport = async (req, res, next) => {
     try {
         const bodyKeys = req.body ? Object.keys(req.body) : [];
         console.log(`[Export] body keys: ${bodyKeys.join(', ')} | body size: ${JSON.stringify(req.body)?.length ?? 0} chars`);
 
-        const { filename, timelineBlocks, globalLineOffsets, activeStyle, lineStyles } = req.body;
+        const { filename, videoUrl, timelineBlocks, globalLineOffsets, activeStyle, lineStyles } = req.body;
 
         const missing = [];
-        if (!filename) missing.push('filename');
+        if (!filename && !videoUrl) missing.push('filename or videoUrl');
         if (!timelineBlocks) missing.push('timelineBlocks');
         if (!activeStyle) missing.push('activeStyle');
         if (missing.length > 0) {
@@ -80,9 +86,12 @@ export const handleExport = async (req, res, next) => {
         }
 
         const tempDir = path.resolve('temp_uploads');
-        const inputVideoPath = path.join(tempDir, filename);
+        // A resumed project has no local temp file (the server's disk isn't durable
+        // across deploys) — its video lives at a durable Cloudinary URL instead.
+        // FFmpeg can read directly from an https URL just like a local path.
+        const inputVideoPath = videoUrl || path.join(tempDir, filename);
 
-        if (!fs.existsSync(inputVideoPath)) {
+        if (!videoUrl && !fs.existsSync(inputVideoPath)) {
             return res.status(404).json({ success: false, message: 'Original video file not found on server.' });
         }
 
@@ -175,7 +184,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
                 const lineStroke = extractAssColor(currentStyle.strokeColor);
 
                 const rawShadowOpacity = currentStyle.shadowOpacity !== undefined ? currentStyle.shadowOpacity : currentStyle.shadowIntensity;
-                const shadowIntensity = rawShadowOpacity !== undefined ? rawShadowOpacity : (currentStyle.hasShadow !== false ? 80 : 0);
+                const shadowIntensityRaw = rawShadowOpacity !== undefined ? rawShadowOpacity : (currentStyle.hasShadow !== false ? 80 : 0);
+                // The shadow toggle always wins, regardless of a stored intensity value —
+                // so turning it back on restores whatever level was set before.
+                const shadowIntensity = currentStyle.hasShadow === false ? 0 : shadowIntensityRaw;
                 const shadowOpacityVal = shadowIntensity / 100;
                 const exactShadowAlphaHex = Math.floor((1 - shadowOpacityVal) * 255).toString(16).padStart(2, '0');
                 const exactShadowAlpha = `&H${exactShadowAlphaHex}&`;
@@ -272,7 +284,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
                 if (isWordStagger) {
                     const wordsArray = enrichedLine?.measuredWords?.length > 0
                         ? enrichedLine.measuredWords
-                        : lineText.split(' ').map(w => ({ text: w }));
+                        : lineText.split(' ').map(w => ({ text: capitalizeWord(w) }));
 
                     if (normalizedStyle === 'bounce' || normalizedStyle === 'popin') {
                         let totalLineWidth = 0;
@@ -301,10 +313,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
                             let currentItalicTag = lItalicTag;
                             let currentFontFam = mappedFontFam;
 
-                            if (wordObj.isEmphasized || wordObj.isEmphasis) {
-                                wordColorHex = wordObj.color || currentStyle.emphasisColor || currentStyle.accentColor || currentStyle.fillColor;
+                            // Only presets that define per-word emphasis (Minimalist, Viral Pop)
+                            // pull the emphasis flag from block.words — the real export payload
+                            // has no enriched per-line words. Gated so Slide Up / Cinematic, whose
+                            // highlighted words are NOT meant to recolor per-word, stay unchanged.
+                            const usesWordEmphasis = !!(currentStyle.emphasisColor || currentStyle.emphasisFontSize);
+                            const srcWord = usesWordEmphasis ? block.words?.[cumulativeWordCount] : null;
+                            if (wordObj.isEmphasized || wordObj.isEmphasis || srcWord?.isEmphasized) {
+                                wordColorHex = wordObj.color || srcWord?.color || currentStyle.emphasisColor || currentStyle.accentColor || currentStyle.fillColor;
 
-                                if (currentStyle.id === 'minimalist') {
+                                // Apply emphasis sizing/font whenever the preset defines emphasis
+                                // props (Minimalist, Viral Pop, …). Presets without them (Slide Up,
+                                // Cinematic, Neon) skip every inner check, so behavior is unchanged.
+                                if (currentStyle.emphasisFontSize || currentStyle.emphasisFontFamily || currentStyle.id === 'minimalist') {
                                     if (currentStyle.emphasisFontSize) wordSizeScaled = Math.round(parseNum(currentStyle.emphasisFontSize, rawLineFontSize) * FONT_COMPENSATION);
                                     if (currentStyle.emphasisFontFamily) currentFontFam = mapFontFamily({ fontFamily: currentStyle.emphasisFontFamily });
                                     if ((currentStyle.emphasisFontFace && currentStyle.emphasisFontFace.toLowerCase().includes('bold')) ||
@@ -420,10 +441,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
                             let currentItalicTag = lItalicTag;
                             let currentFontFam = mappedFontFam;
 
-                            if (wordObj.isEmphasized || wordObj.isEmphasis) {
-                                wordColorHex = wordObj.color || currentStyle.emphasisColor || currentStyle.accentColor || currentStyle.fillColor;
+                            // Only presets that define per-word emphasis (Minimalist, Viral Pop)
+                            // pull the emphasis flag from block.words — the real export payload
+                            // has no enriched per-line words. Gated so Slide Up / Cinematic, whose
+                            // highlighted words are NOT meant to recolor per-word, stay unchanged.
+                            const usesWordEmphasis = !!(currentStyle.emphasisColor || currentStyle.emphasisFontSize);
+                            const srcWord = usesWordEmphasis ? block.words?.[cumulativeWordCount] : null;
+                            if (wordObj.isEmphasized || wordObj.isEmphasis || srcWord?.isEmphasized) {
+                                wordColorHex = wordObj.color || srcWord?.color || currentStyle.emphasisColor || currentStyle.accentColor || currentStyle.fillColor;
 
-                                if (currentStyle.id === 'minimalist') {
+                                // Apply emphasis sizing/font whenever the preset defines emphasis
+                                // props (Minimalist, Viral Pop, …). Presets without them (Slide Up,
+                                // Cinematic, Neon) skip every inner check, so behavior is unchanged.
+                                if (currentStyle.emphasisFontSize || currentStyle.emphasisFontFamily || currentStyle.id === 'minimalist') {
                                     if (currentStyle.emphasisFontSize) wordSizeScaled = Math.round(parseNum(currentStyle.emphasisFontSize, rawLineFontSize) * FONT_COMPENSATION);
                                     if (currentStyle.emphasisFontFamily) currentFontFam = mapFontFamily({ fontFamily: currentStyle.emphasisFontFamily });
                                     if ((currentStyle.emphasisFontFace && currentStyle.emphasisFontFace.toLowerCase().includes('bold')) ||
@@ -441,15 +471,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
                             const inactiveHex = currentStyle.inactiveColor;
                             let initialStateText, targetStateText, initialStateShadow;
 
+                            // The shadow layer must draw ONLY the drop shadow (\4a) — its
+                            // primary fill (\1a) and outline (\3a) are forced fully transparent
+                            // so it never renders a white glyph. Otherwise the glyph's opaque
+                            // white fill, blurred, shows as a ghost/glow before the word fades in.
                             if (inactiveHex) {
                                 const inactiveFill = extractAssColor(inactiveHex);
                                 initialStateText   = `\\1c${inactiveFill.rgb}\\1a${inactiveFill.alpha}\\3a${lineStroke.alpha}`;
                                 targetStateText    = `\\1c${dynamicFill.rgb}\\1a${dynamicFill.alpha}\\3a${lineStroke.alpha}`;
-                                initialStateShadow = `\\4a${exactShadowAlpha}`;
+                                initialStateShadow = `\\1a&HFF&\\3a&HFF&\\4a${exactShadowAlpha}`;
                             } else {
                                 initialStateText   = `\\1c${dynamicFill.rgb}\\1a&HFF&\\3a&HFF&`;
                                 targetStateText    = `\\1a${dynamicFill.alpha}\\3a${lineStroke.alpha}`;
-                                initialStateShadow = `\\4a&HFF&`;
+                                initialStateShadow = `\\1a&HFF&\\3a&HFF&\\4a&HFF&`;
                             }
 
                             const inlineTextTags = `{${styleTags}${initialStateText}\\t(${wordStartAnim},${wordEndAnim},${targetStateText})}`;
@@ -482,7 +516,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
                         let constructedShadow = '';
 
                         wordsSource.forEach(w => {
-                            const safeWord = String(w.text || w.word || '').trim();
+                            const safeWord = capitalizeWord(String(w.text || w.word || '').trim());
                             if (!safeWord) { constructedLine += ' '; constructedShadow += ' '; return; }
 
                             let wordColorHex = currentStyle.fillColor;
@@ -509,7 +543,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
 
                             const wTags = `{\\fs${wordSizeScaled}${currentBoldTag}${currentItalicTag}\\fn${currentFontFam}\\1c${wFill.rgb}\\1a${wFill.alpha}\\3a${lineStroke.alpha}}`;
                             constructedLine   += `${wTags}${safeWord.replace(/[{}]/g, '')} `;
-                            constructedShadow += `{\\fs${wordSizeScaled}${currentBoldTag}${currentItalicTag}\\fn${currentFontFam}\\4a${exactShadowAlpha}\\xshad${lShadowX}\\yshad${lShadowY}}${safeWord.replace(/[{}]/g, '')} `;
+                            // Shadow layer draws only the shadow (\4a) — \1a/\3a forced transparent
+                            // so no opaque white glyph fill bleeds out as a glow.
+                            constructedShadow += `{\\fs${wordSizeScaled}${currentBoldTag}${currentItalicTag}\\fn${currentFontFam}\\1a&HFF&\\3a&HFF&\\4a${exactShadowAlpha}\\xshad${lShadowX}\\yshad${lShadowY}}${safeWord.replace(/[{}]/g, '')} `;
                         });
 
                         finalAssText    = constructedLine.trimEnd();
@@ -524,7 +560,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
                                     : lineText.split(' ').map(w => ({ text: w, isEmphasized: false }));
 
                         fallbackWords.forEach((wordObj) => {
-                            const word = String(wordObj.text || wordObj.word || '').trim();
+                            const word = capitalizeWord(String(wordObj.text || wordObj.word || '').trim());
                             if (!word) { finalAssText += ' '; finalShadowText += ' '; return; }
 
                             const isEmp = wordObj.isEmphasized === true || wordObj.isEmphasis === true || wordObj.highlighted === true;
@@ -542,7 +578,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
                             finalAssText += `{${styleTags}}${word.replace(/[{}]/g, '')} `;
 
                             if (shadowIntensity > 0) {
-                                const shadowTags = `\\fs${scaledSize}${dynamicBoldTag}${dynamicItalicTag}\\fn${dynamicFontFam}\\4a${exactShadowAlpha}\\xshad${lShadowX}\\yshad${lShadowY}`;
+                                const shadowTags = `\\fs${scaledSize}${dynamicBoldTag}${dynamicItalicTag}\\fn${dynamicFontFam}\\1a&HFF&\\3a&HFF&\\4a${exactShadowAlpha}\\xshad${lShadowX}\\yshad${lShadowY}`;
                                 finalShadowText += `{${shadowTags}}${word.replace(/[{}]/g, '')} `;
                             }
                             cumulativeWordCount++;

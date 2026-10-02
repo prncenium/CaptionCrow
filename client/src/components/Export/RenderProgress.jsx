@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Download, Film, Play, Cloud, Cpu, HardDrive, RotateCcw } from 'lucide-react';
 import { useEditorStore } from '../../store/useEditorStore';
+import { useProjectStore } from '../../store/useProjectStore';
 import { getApiBase } from '../../utils/apiConfig';
 
 export default function RenderProgress() {
-    const { videoFile, videoUrl, serverVideoFilename, timelineBlocks, globalLineOffsets, activeStyle, lineStyles } = useEditorStore();
+    const { videoFile, videoUrl, serverVideoFilename, remoteVideoUrl, timelineBlocks, globalLineOffsets, activeStyle, lineStyles } = useEditorStore();
     
     const [renderStatus, setRenderStatus] = useState('idle');
     const [progress, setProgress] = useState(0);
@@ -34,7 +35,9 @@ export default function RenderProgress() {
     };
 
     const startRender = async () => {
-        if (!videoFile || !serverVideoFilename) {
+        // A resumed project has no local server file — it exports from its
+        // durable Cloudinary URL instead (see remoteVideoUrl).
+        if (!videoFile || (!serverVideoFilename && !remoteVideoUrl)) {
             alert("No video file found! Please upload a video first.");
             return;
         }
@@ -45,6 +48,7 @@ export default function RenderProgress() {
 
         const bodyPayload = JSON.stringify({
             filename: serverVideoFilename,
+            videoUrl: remoteVideoUrl,
             timelineBlocks,
             globalLineOffsets,
             activeStyle,
@@ -53,6 +57,7 @@ export default function RenderProgress() {
         });
         console.log('[Export] Sending to server:', {
             filename: serverVideoFilename,
+            remoteVideoUrl,
             timelineBlocksCount: timelineBlocks.length,
             activeStylePresent: !!activeStyle,
             bodySizeKB: (bodyPayload.length / 1024).toFixed(1)
@@ -103,10 +108,14 @@ export default function RenderProgress() {
             }
 
             setFinalUrl(data.downloadUrl);
-            
+
             // Snap to 100% and show completion UI
             setProgress(100);
             setRenderStatus('complete');
+
+            // Reflects in the "Exported" badge on the My Edits card, if this session is saved
+            const { currentEditId } = useProjectStore.getState();
+            if (currentEditId) useProjectStore.getState().markExported(currentEditId);
 
             // Open the rendered video in a new tab (unchanged behavior)
             const link = document.createElement('a');

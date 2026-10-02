@@ -1,5 +1,5 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
-import { Stage, Layer, Text, Group,Rect } from 'react-konva';
+import { Stage, Layer, Text, Group, Rect, Line, Circle } from 'react-konva';
 import Konva from 'konva';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { calculateAnimation } from '../../../utils/animationEngine';
@@ -11,6 +11,11 @@ const VIRTUAL_HEIGHT = 1920;
 // ASS font units ≠ CSS pixels; this factor makes the canvas preview render
 // at the same visual size as the exported video.
 const FONT_COMP = 1.86;
+
+// Capitalizes just the first letter of a word, leaving the rest untouched —
+// so raw lowercase transcript words ("text") render as "Text" while words
+// already in a deliberate case ("AI") aren't mangled into "Ai".
+const capitalizeWord = (word) => word ? word.charAt(0).toUpperCase() + word.slice(1) : word;
 
 // 🚨 THE FIX: A dedicated component to safely handle Konva Blur & Caching
 function AnimatedWord({ word, animState, style, x, y, halfWordW, halfWordH, onClick }) {
@@ -29,7 +34,10 @@ function AnimatedWord({ word, animState, style, x, y, halfWordW, halfWordH, onCl
     }, [animState.blur, animState.scale, animState.opacity, word, style.fontSize]);
 
     // 🚨 Convert 0-100 slider value to 0-1 opacity scale
-    const shadowIntensity = style.shadowIntensity !== undefined ? style.shadowIntensity : (style.hasShadow !== false ? 80 : 0);
+    const shadowIntensityRaw = style.shadowIntensity !== undefined ? style.shadowIntensity : (style.hasShadow !== false ? 80 : 0);
+    // The shadow toggle always wins, regardless of a stored intensity value —
+    // so turning it back on restores whatever level was set before.
+    const shadowIntensity = style.hasShadow === false ? 0 : shadowIntensityRaw;
     const shadowOpacityVal = shadowIntensity / 100;
 
     return (
@@ -67,7 +75,11 @@ function AnimatedWord({ word, animState, style, x, y, halfWordW, halfWordH, onCl
 export default function CanvasOverlay() {
     const containerRef = useRef(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-    
+    // Tracks the line currently being dragged so we can render a selection box +
+    // center crosshair guides over it (like Canva/CapCut alignment guides) — purely
+    // visual, so users can see they're repositioning a whole caption line.
+    const [dragGuide, setDragGuide] = useState(null);
+
     const {
         currentTime,
         activeStyle,
@@ -186,7 +198,7 @@ lines.forEach((_, index) => {
 
                                     const canvas = document.createElement('canvas');
                                     const context = canvas.getContext('2d');
-                                    const words = lineText.split(' ');
+                                    const words = lineText.split(' ').map(capitalizeWord);
                                     
                                     let totalLineWidth = 0;
                                     const wordWidths = words.map(w => {
@@ -376,18 +388,32 @@ context.font = `${measureStyle} ${measureWeight} ${wSize}px "${measureFamily}"`;
                                             x={finalLineX}
                                             y={finalLineY}
                                             onClick={(e) => {
-                                                e.cancelBubble = true; 
+                                                e.cancelBubble = true;
                                                 setSelectedBlock(block.id);
+                                            }}
+                                            onDragStart={(e) => {
+                                                setDragGuide({
+                                                    boxLocalX: safeStartX - 20,
+                                                    boxLocalY: -10,
+                                                    boxW: totalLineWidth + 40,
+                                                    boxH: style.fontSize * LINE_HEIGHT_MULTIPLIER + 20,
+                                                    x: e.target.x(),
+                                                    y: e.target.y(),
+                                                });
+                                            }}
+                                            onDragMove={(e) => {
+                                                setDragGuide((prev) => (prev ? { ...prev, x: e.target.x(), y: e.target.y() } : prev));
                                             }}
                                             onDragEnd={(e) => {
                                                 const droppedX = e.target.x() - lineAnimState.offsetX;
                                                 const droppedY = e.target.y() - lineAnimState.offsetY;
-                                                
+
                                                 if (editingCaptionId === block.id) {
                                                     updateBlockPosition(block.id, index, droppedX, droppedY);
                                                 } else {
                                                     setGlobalLineOffset(index, droppedX, droppedY);
                                                 }
+                                                setDragGuide(null);
                                             }}
                                             onMouseEnter={(e) => {
                                                 const container = e.target.getStage().container();
@@ -417,6 +443,30 @@ context.font = `${measureStyle} ${measureWeight} ${wSize}px "${measureFamily}"`;
                             </Group>
                         );
                     })}
+
+                    {/* Drag guides: selection box + center crosshair over the line being
+                        dragged, so it's visually clear a whole caption line is moving. */}
+                    {dragGuide && (() => {
+                        const absX = dragGuide.x + dragGuide.boxLocalX;
+                        const absY = dragGuide.y + dragGuide.boxLocalY;
+                        const centerX = absX + dragGuide.boxW / 2;
+                        const centerY = absY + dragGuide.boxH / 2;
+                        const handlePoints = [
+                            [absX, absY], [centerX, absY], [absX + dragGuide.boxW, absY],
+                            [absX, centerY], [absX + dragGuide.boxW, centerY],
+                            [absX, absY + dragGuide.boxH], [centerX, absY + dragGuide.boxH], [absX + dragGuide.boxW, absY + dragGuide.boxH],
+                        ];
+                        return (
+                            <Group listening={false}>
+                                <Line points={[centerX, 0, centerX, VIRTUAL_HEIGHT]} stroke="#0891B2" strokeWidth={2.5} dash={[6, 4]} />
+                                <Line points={[0, centerY, VIRTUAL_WIDTH, centerY]} stroke="#C2410C" strokeWidth={2.5} dash={[6, 4]} />
+                                <Rect x={absX} y={absY} width={dragGuide.boxW} height={dragGuide.boxH} stroke="#FFFFFF" strokeWidth={1.5} cornerRadius={4} />
+                                {handlePoints.map(([hx, hy], i) => (
+                                    <Circle key={i} x={hx} y={hy} radius={6} fill="#FFFFFF" stroke="#888888" strokeWidth={1} />
+                                ))}
+                            </Group>
+                        );
+                    })()}
                 </Layer>
             </Stage>
         </div>

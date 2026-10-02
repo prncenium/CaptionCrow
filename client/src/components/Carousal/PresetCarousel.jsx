@@ -3,7 +3,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 
-const COMING_SOON_IMG = 'https://res.cloudinary.com/dbtfi1rbi/image/upload/v1781002253/Screenshot_2026-06-09_161355_xph2fq.png';
+const COMING_SOON_IMG = 'https://res.cloudinary.com/xjo36sha/image/upload/v1790937791/Screenshot_2026-06-09_161355_xph2fq.png';
 
 const SLOT = {
   farLeft:  { x: '-92%', scale: 0.50, opacity: 0.14, blur: 6,   z: 10 },

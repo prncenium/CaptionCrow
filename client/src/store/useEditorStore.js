@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { groupCaptions } from '../utils/captionChunker';
+import { groupCaptions, alignPhraseBreaks } from '../utils/captionChunker';
 import { PRESET_STYLES } from '../utils/presetStyles';
 import { filterMinimalistHighlights } from '../utils/minimalistHighlightFilter';
 import { useProjectStore } from './useProjectStore';
@@ -9,13 +9,16 @@ export const useEditorStore = create((set, get) => ({
     // --- Media State ---
     videoFile: null,
     videoUrl: null,
-    serverVideoFilename: null,
+    serverVideoFilename: null, // local temp filename on the server — used by fresh uploads
+    remoteVideoUrl: null,      // durable Cloudinary URL — used by resumed projects (no local file)
     isPlaying: false,
     currentTime: 0,
     duration: 0,
     transcription: [],
     aiHighlights: [],      // active lookup list used by canvas (may be filtered for Minimalist)
     rawAiHighlights: [],   // original unfiltered LLaMA output — used to restore on preset switch
+    aiPhraseBreaks: [],    // raw AI phrase segments {text, sentenceEnd}[] — kept for reference/debug
+    wordSegments: [],      // per-word {segmentId, sentenceEnd} map, aligned to `transcription`
     isProcessing: false,
     
     // --- Timeline Data Engine ---
@@ -35,7 +38,10 @@ export const useEditorStore = create((set, get) => ({
         strokeColor: '#000000',
         strokeWidth: 0,
         shadowColor: 'rgba(0,0,0,0.8)',
-        shadowBlur: 10,
+        hasShadow: true,
+        shadowOpacity: 70,
+        shadowIntensity: 70,
+        shadowBlur: 5,
         shadowOffsetX: 4,
         shadowOffsetY: 4,
         maxCharsPerLine: 11,
@@ -58,12 +64,12 @@ export const useEditorStore = create((set, get) => ({
     globalLineOffsets: {},
 
     // --- Actions ---
-    setVideo: (file, url) => set({ videoFile: file, videoUrl: url, isPlaying: false, currentTime: 0 }),
+    setVideo: (file, url) => set({ videoFile: file, videoUrl: url, remoteVideoUrl: null, isPlaying: false, currentTime: 0 }),
     setServerVideoFilename: (name) => set({ serverVideoFilename: name }), 
     setPlaying: (isPlaying) => set({ isPlaying }),
     setCurrentTime: (time) => set({ currentTime: time }),
     setDuration: (duration) => set({ duration }),
-    setTranscription: (data, highlights = []) => {
+    setTranscription: (data, highlights = [], phraseBreaks = []) => {
 
     const normalizedHighlights = highlights.map(h =>
         String(h)
@@ -95,6 +101,8 @@ export const useEditorStore = create((set, get) => ({
         transcription: enrichedData,
         aiHighlights: highlights,
         rawAiHighlights: highlights, // preserve original for preset restore
+        aiPhraseBreaks: phraseBreaks,
+        wordSegments: alignPhraseBreaks(data, phraseBreaks),
     });
 },
     setIsProcessing: (status) => set({ isProcessing: status }),
@@ -123,12 +131,14 @@ export const useEditorStore = create((set, get) => ({
 
     bakeTimeline: () => set((state) => {
         const chunks = groupCaptions(
-            state.transcription, 
-            state.activeStyle.maxCharsPerLine, 
+            state.transcription,
+            state.activeStyle.maxCharsPerLine,
             state.activeStyle.maxLinesPerCard,
-            state.aiHighlights // 🚨 THIS MUST BE HERE
+            state.aiHighlights, // 🚨 THIS MUST BE HERE
+            state.wordSegments,
+            state.activeStyle.id
         );
-        
+
         const bakedBlocks = chunks.map((chunk, index) => {
             const existingBlock = state.timelineBlocks.find(b => b.start === chunk.start);
             return {
@@ -140,7 +150,7 @@ export const useEditorStore = create((set, get) => ({
     words: chunk.words || [],
 
     customLinePositions: existingBlock?.customLinePositions || {},
-    styleOverrides: existingBlock?.styleOverrides || {} 
+    styleOverrides: existingBlock?.styleOverrides || {}
 };
         });
 
@@ -265,9 +275,11 @@ applyPreset: (presetId) => {
             enrichedTranscription,
             safeMaxChars,
             safeMaxLines,
-            state.aiHighlights
+            state.aiHighlights,
+            state.wordSegments,
+            safeId
         );
-        
+
         // Step 3: Re-bake new timeline blocks using the re-enriched transcription
         const bakedBlocks = chunks.map((chunk, index) => {
             const existingCleanBlock = cleanOldBlocks.find(b => b.start === chunk.start);
@@ -300,10 +312,8 @@ applyPreset: (presetId) => {
         };
     });
     // get().bakeTimeline(); //🚨 DELETED: Now integrated into the single set() update!
-
-    // Track active preset in My Edits history
-    const { currentEditId, updateEditPreset } = useProjectStore.getState();
-    if (currentEditId) updateEditPreset(currentEditId, safeId);
+    // (Saving the new preset to My Edits happens automatically via the autosave
+    // subscription at the bottom of this file — no manual call needed here.)
 
     // Auto-trigger AI refresh for minimalist if AI data is sparse (old cached / never run)
     if (safeId === 'minimalist') {
@@ -351,7 +361,7 @@ applyPreset: (presetId) => {
 
             const safeMaxChars = currentState.activeStyle.maxCharsPerLine || 15;
             const safeMaxLines = currentState.activeStyle.maxLinesPerCard || 1;
-            const chunks = groupCaptions(enrichedTranscription, safeMaxChars, safeMaxLines, nextAiHighlights);
+            const chunks = groupCaptions(enrichedTranscription, safeMaxChars, safeMaxLines, nextAiHighlights, currentState.wordSegments, currentState.activeStyle.id);
             const bakedBlocks = chunks.map((chunk, index) => {
                 const existingBlock = currentState.timelineBlocks.find(b => b.start === chunk.start);
                 return {
@@ -436,14 +446,47 @@ applyPreset: (presetId) => {
         });
     },
 
+    // Hydrates the editor from a saved project (My Edits → click to resume).
+    // The video plays from its durable Cloudinary URL — there's no local file,
+    // so serverVideoFilename stays null and remoteVideoUrl carries export/playback instead.
+    loadProject: (project) => {
+        const transcription = project.transcription || [];
+        const aiPhraseBreaks = project.aiPhraseBreaks || [];
+        set({
+            videoFile: { name: project.videoName || project.projectName || 'video.mp4' },
+            videoUrl: project.videoUrl,
+            serverVideoFilename: null,
+            remoteVideoUrl: project.videoUrl,
+            isPlaying: false,
+            currentTime: 0,
+            transcription,
+            aiHighlights: project.aiHighlights || [],
+            rawAiHighlights: project.rawAiHighlights || [],
+            aiPhraseBreaks,
+            wordSegments: alignPhraseBreaks(transcription, aiPhraseBreaks),
+            timelineBlocks: project.timelineBlocks || [],
+            activeStyle: project.activeStyle || {},
+            lineStyles: project.lineStyles || [],
+            globalLineOffsets: project.globalLineOffsets || {},
+            selectedBlockId: null,
+            editingCaptionId: null,
+            history: [],
+        });
+        useProjectStore.getState().setCurrentEditId(project._id);
+    },
+
     resetEditor: () => set({
         videoFile: null,
         videoUrl: null,
         serverVideoFilename: null,
+        remoteVideoUrl: null,
         isPlaying: false,
         currentTime: 0,
         transcription: [],
         aiHighlights:[],
+        rawAiHighlights: [],
+        aiPhraseBreaks: [],
+        wordSegments: [],
         isProcessing: false,
         lineStyles: [],
         activeLineTarget: -1,
@@ -454,3 +497,42 @@ applyPreset: (presetId) => {
         editingCaptionId: null
     })
 }));
+
+// --- Autosave: debounced save-to-account for a resumed/created project ---
+// Watches only the slices that represent a meaningful caption/style edit
+// (ignores currentTime/isPlaying, which change constantly during playback).
+// A no-op whenever there's no logged-in-and-saved project (currentEditId null).
+let autosaveTimer = null;
+let lastAutosaveSnapshot = { timelineBlocks: null, activeStyle: null, lineStyles: null, globalLineOffsets: null };
+
+useEditorStore.subscribe((state) => {
+    const changed = (
+        state.timelineBlocks !== lastAutosaveSnapshot.timelineBlocks ||
+        state.activeStyle !== lastAutosaveSnapshot.activeStyle ||
+        state.lineStyles !== lastAutosaveSnapshot.lineStyles ||
+        state.globalLineOffsets !== lastAutosaveSnapshot.globalLineOffsets
+    );
+    if (!changed) return;
+
+    lastAutosaveSnapshot = {
+        timelineBlocks: state.timelineBlocks,
+        activeStyle: state.activeStyle,
+        lineStyles: state.lineStyles,
+        globalLineOffsets: state.globalLineOffsets,
+    };
+
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => {
+        const { currentEditId } = useProjectStore.getState();
+        if (!currentEditId) return;
+        const s = useEditorStore.getState();
+        useProjectStore.getState().updateProject(currentEditId, {
+            transcription: s.transcription,
+            timelineBlocks: s.timelineBlocks,
+            activeStyle: s.activeStyle,
+            lineStyles: s.lineStyles,
+            globalLineOffsets: s.globalLineOffsets,
+            aiHighlights: s.aiHighlights,
+        });
+    }, 1500);
+});

@@ -19,38 +19,35 @@ export const PRESET_STYLES = {
         strokeColor: 'transparent',
         strokeWidth: 0,
         shadowColor: '#000000',
-        shadowOpacity: 0,     // 🚨 STRICT 0: Forces "All Lines" slider to 0%
-        shadowIntensity: 0,
+        hasShadow: true,
+        shadowOpacity: 70,     // Drop shadow, on by default (toggle in the UI)
+        shadowIntensity: 70,
         shadowOffsetX: 0,
-        shadowOffsetY: 0,
-        shadowBlur: 0,
+        shadowOffsetY: 2,
+        shadowBlur: 5,
         wordStagger: true,
         animationStyle: 'slideUp',
         animationDurationMs: 300,
         staggerDelayMs: 150,
         motionBlur: 1,
         linesPerCard: 2,      // 🚨 FIXED KEY: Connects to the Layout Slider
-        charsPerLine: 11,     // 🚨 FIXED KEY: Connects to the Layout Slider
+        charsPerLine: 14,     // 🚨 FIXED KEY: Connects to the Layout Slider
         
         // Line-specific overrides
         lineStyles: {
             0: { // Line 1
                 fontFamily: 'Poppins',
                 fontFace: 'SemiBold', // 🚨 ADDED
-                fontWeight: '600', 
+                fontWeight: '600',
                 fontSize: 48,
                 fillColor: '#FFFFFF',
-                shadowOpacity: 0,     // 🚨 STRICT 0
-                shadowIntensity: 0,
             },
             1: { // Line 2
                 fontFamily: 'Poppins',
                 fontFace: 'Bold',     // 🚨 ADDED: Forces Line 2 dropdown to 'Bold'
-                fontWeight: '700', 
+                fontWeight: '700',
                 fontSize: 100,
-                fillColor: '#FFFF3D', 
-                shadowOpacity: 0,     // 🚨 STRICT 0
-                shadowIntensity: 0,
+                fillColor: '#FFFF3D',
             }
         }
     },
@@ -72,12 +69,13 @@ export const PRESET_STYLES = {
         strokeColor: 'transparent',
         strokeWidth: 0,
         shadowColor: '#000000',
-        shadowOpacity: 0,    
-        shadowIntensity: 0,  
+        hasShadow: true,
+        shadowOpacity: 70,     // Drop shadow, on by default (toggle in the UI)
+        shadowIntensity: 70,
         shadowOffsetX: 0,
-        shadowOffsetY: 0,
-        shadowBlur: 0,       
-        wordStagger: true,   
+        shadowOffsetY: 2,
+        shadowBlur: 5,
+        wordStagger: true,
         animationStyle: 'none',
         animationDurationMs: 300,
         staggerDelayMs: 300,  
@@ -98,10 +96,7 @@ export const PRESET_STYLES = {
                 fillColor: '#000000',
                 hasBackground: true,
                 backgroundColor: '#FFFFFF',
-                shadowOpacity: 0,
-                shadowIntensity: 0,
-                shadowBlur: 0,
-                staggerDelayMs: 300 
+                staggerDelayMs: 300
             }
         }
     },
@@ -119,11 +114,12 @@ fontStyle: 'normal',
         strokeColor: 'transparent',
         strokeWidth: 0,
         shadowColor: '#000000',
-        shadowOpacity: 80,    
-        shadowIntensity: 80,
+        hasShadow: true,
+        shadowOpacity: 70,     // Drop shadow, on by default (toggle in the UI)
+        shadowIntensity: 70,
         shadowOffsetX: 0,
-        shadowOffsetY: 0,
-        shadowBlur: 0,        
+        shadowOffsetY: 2,
+        shadowBlur: 5,
         wordStagger: false,
         animationStyle: 'none',
         animationDurationMs: 0,
@@ -148,9 +144,6 @@ fontStyle: 'normal',
                 fontWeight: '400',
                 fontSize: 44,
                 fillColor: '#FFFFFF',
-                shadowOpacity: 10,
-                shadowIntensity: 10,
-                shadowBlur: 1,
                 emphasisColor: '#FFFF3D',
                 emphasisFontSize: 58,
                 emphasisFontFamily: 'Apple Garamond',
@@ -173,11 +166,12 @@ fontStyle: 'normal',
         strokeColor: 'transparent',
         strokeWidth: 0,
         shadowColor: '#000000',
-        shadowOpacity: 0,
-        shadowIntensity: 0,
+        hasShadow: true,
+        shadowOpacity: 70,     // Drop shadow, on by default (toggle in the UI)
+        shadowIntensity: 70,
         shadowOffsetX: 0,
-        shadowOffsetY: 0,
-        shadowBlur: 0,
+        shadowOffsetY: 2,
+        shadowBlur: 5,
 
         // Y-axis bounce word by word — words rise from below to baseline
         wordStagger: true,
@@ -191,6 +185,58 @@ fontStyle: 'normal',
         maxCharsPerLine: 20,
         charsPerLine: 20,
     },
-    
-    
+
+    'viral-pop': {
+        id: 'viral-pop',
+        name: 'Viral Pop',
+
+        // Global / base word defaults — small, white
+        fontFamily: 'Poppins',
+        fontFace: 'Bold',
+        fontWeight: '700',
+        fontStyle: 'normal',
+        fontSize: 42,
+        fillColor: '#FFFFFF',
+        strokeColor: 'transparent',
+        strokeWidth: 0,
+        shadowColor: '#000000',
+        hasShadow: true,
+        shadowOpacity: 70,
+        shadowIntensity: 70,
+        shadowOffsetX: 0,
+        shadowOffsetY: 2,
+        shadowBlur: 5,
+
+        // Word-by-word pop-in (scale up + fade, slight overshoot)
+        wordStagger: true,
+        animationStyle: 'popin',
+        animationDurationMs: 350,
+        staggerDelayMs: 140,
+        motionBlur: 0,
+
+        // Stacked layout — multi-word lines (up to 3 words), AI decides 2 or 3 lines/card
+        linesPerCard: 3,
+        charsPerLine: 18,
+        maxLinesPerCard: 3,
+        maxCharsPerLine: 18,
+
+        // Per-line styling — the SECOND line is the big yellow emphasis line;
+        // lines 1 and 3 are smaller and white.
+        lineStyles: {
+            0: { // Line 1 — small, white
+                fontFamily: 'Poppins', fontFace: 'Bold', fontWeight: '700',
+                fontSize: 42, fillColor: '#FFFFFF',
+            },
+            1: { // Line 2 — BIG, yellow
+                fontFamily: 'Poppins', fontFace: 'Bold', fontWeight: '700',
+                fontSize: 82, fillColor: '#FFFF3D',
+            },
+            2: { // Line 3 — small, white
+                fontFamily: 'Poppins', fontFace: 'Bold', fontWeight: '700',
+                fontSize: 42, fillColor: '#FFFFFF',
+            },
+        },
+    },
+
+
 };

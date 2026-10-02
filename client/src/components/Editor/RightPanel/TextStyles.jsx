@@ -413,39 +413,57 @@ export default function TextStyles() {
                                 </div>
                             </div>
 
-                            {/* 🚨 UPDATED: DROP SHADOW INTENSITY SLIDER (Glass UI) */}
-                            <div className="grid grid-cols-[1fr_2fr] items-center gap-4 mt-2">
-                                <span className="text-[10px] tracking-[0.14em] font-bold text-neutral-500 uppercase">Shadow Opacity</span>
-                                <div className="flex items-center gap-3">
-                                    <input 
-                                        type="range" min="0" max="100" 
-                                        value={currentStyle.shadowIntensity !== undefined ? currentStyle.shadowIntensity : (currentStyle.hasShadow !== false ? 80 : 0)}
-                                        onChange={(e) => updateStyle({ shadowIntensity: parseInt(e.target.value), hasShadow: parseInt(e.target.value) > 0 })}
-                                        className={glassSliderClass}
-                                        style={getSliderStyle(currentStyle.shadowIntensity !== undefined ? currentStyle.shadowIntensity : (currentStyle.hasShadow !== false ? 80 : 0), 0, 100)}
-                                    />
-                                    <span className="text-[12px] font-bold text-[#34C759] w-8 text-right tabular-nums">
-                                        {currentStyle.shadowIntensity !== undefined ? currentStyle.shadowIntensity : (currentStyle.hasShadow !== false ? 80 : 0)}%
-                                    </span>
+                            {/* 🚨 TEXT SHADOW TOGGLE + SLIDERS */}
+                            <hr className="border-white/55 mt-4" />
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center mb-2 mt-4">
+                                    <span className="text-[10px] tracking-[0.14em] font-bold text-neutral-500 uppercase">Text Shadow</span>
+                                    {/* Glassy iOS-style Toggle Switch */}
+                                    <button
+                                        onClick={() => updateStyle({ hasShadow: currentStyle.hasShadow === false })}
+                                        className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out ${currentStyle.hasShadow !== false ? 'bg-[#34C759]' : 'bg-white/40 border border-white/60'}`}
+                                    >
+                                        <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${currentStyle.hasShadow !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+                                    </button>
                                 </div>
-                            </div>
 
-                            
+                                {/* Conditional Render: Only show shadow sliders if the toggle is ON */}
+                                {currentStyle.hasShadow !== false && (
+                                    <>
+                                        {/* DROP SHADOW INTENSITY SLIDER (Glass UI) */}
+                                        <div className="grid grid-cols-[1fr_2fr] items-center gap-4 mt-2">
+                                            <span className="text-[10px] tracking-[0.14em] font-bold text-neutral-500 uppercase">Shadow Opacity</span>
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="range" min="0" max="100"
+                                                    value={currentStyle.shadowIntensity !== undefined ? currentStyle.shadowIntensity : 18}
+                                                    onChange={(e) => updateStyle({ shadowIntensity: parseInt(e.target.value) })}
+                                                    className={glassSliderClass}
+                                                    style={getSliderStyle(currentStyle.shadowIntensity !== undefined ? currentStyle.shadowIntensity : 18, 0, 100)}
+                                                />
+                                                <span className="text-[12px] font-bold text-[#34C759] w-8 text-right tabular-nums">
+                                                    {currentStyle.shadowIntensity !== undefined ? currentStyle.shadowIntensity : 18}%
+                                                </span>
+                                            </div>
+                                        </div>
 
-                            {/* 🚨 NEW: DROP SHADOW SOFTNESS (BLUR) SLIDER */}
-                            <div className="grid grid-cols-[1fr_2fr] items-center gap-4 mt-2">
-                                <span className="text-[10px] tracking-[0.14em] font-bold text-neutral-500 uppercase">Shadow Softness</span>
-                                <div className="flex items-center gap-3">
-                                    <input 
-                                        type="range" min="0" max="50" 
-                                        value={currentStyle.shadowBlur || 0}
-                                        onChange={(e) => updateStyle({ shadowBlur: parseInt(e.target.value) })}
-                                        className={glassSliderClass}
-                                    />
-                                    <span className="text-[12px] font-bold text-[#34C759] w-8 text-right tabular-nums">
-                                        {currentStyle.shadowBlur || 0}px
-                                    </span>
-                                </div>
+                                        {/* DROP SHADOW SOFTNESS (BLUR) SLIDER */}
+                                        <div className="grid grid-cols-[1fr_2fr] items-center gap-4 mt-2">
+                                            <span className="text-[10px] tracking-[0.14em] font-bold text-neutral-500 uppercase">Shadow Softness</span>
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="range" min="0" max="50"
+                                                    value={currentStyle.shadowBlur || 0}
+                                                    onChange={(e) => updateStyle({ shadowBlur: parseInt(e.target.value) })}
+                                                    className={glassSliderClass}
+                                                />
+                                                <span className="text-[12px] font-bold text-[#34C759] w-8 text-right tabular-nums">
+                                                    {currentStyle.shadowBlur || 0}px
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                         </div>

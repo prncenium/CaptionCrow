@@ -1,46 +1,38 @@
 import express from 'express';
-import Project from '../models/Project.js';
+import { protect } from '../middlewares/authMiddleware.js';
 import { regenerateTranscription } from '../controllers/transcriptionController.js';
+import {
+    createProject,
+    updateProject,
+    listProjects,
+    getProject,
+    deleteProject,
+} from '../controllers/projectController.js';
 
 const router = express.Router();
 
+// All project routes require a logged-in user — a project always belongs to
+// exactly one account, and ownership is re-checked per-request in the controller.
+router.use(protect);
+
 // @route   POST /api/projects
-// @desc    Create and save a new video editing project to the database
-router.post('/', async (req, res, next) => {
-    try {
-        const { projectName, transcription, videoUrl } = req.body;
+// @desc    Save the current editor session as a new resumable project
+router.post('/', createProject);
 
-        if (!transcription) {
-            return res.status(400).json({ success: false, error: 'Transcription data is required to save a project.' });
-        }
-
-        const newProject = await Project.create({
-            projectName: projectName || 'Untitled Project',
-            transcription,
-            videoUrl
-        });
-
-        res.status(201).json({ success: true, data: newProject });
-    } catch (error) {
-        next(error);
-    }
-});
+// @route   GET /api/projects
+// @desc    List the logged-in user's saved projects (for the My Edits page)
+router.get('/', listProjects);
 
 // @route   GET /api/projects/:id
-// @desc    Fetch a specific project to load back into the Canvas Editor
-router.get('/:id', async (req, res, next) => {
-    try {
-        const project = await Project.findById(req.params.id);
-        
-        if (!project) {
-            return res.status(404).json({ success: false, error: 'Project not found.' });
-        }
+// @desc    Fetch a specific project to load back into the editor
+router.get('/:id', getProject);
 
-        res.status(200).json({ success: true, data: project });
-    } catch (error) {
-        next(error);
-    }
-});
+// @route   PUT /api/projects/:id
+// @desc    Autosave caption/style edits onto an existing project
+router.put('/:id', updateProject);
+
+// @route   DELETE /api/projects/:id
+router.delete('/:id', deleteProject);
 
 // @route   POST /api/projects/:projectId/regenerate
 // @desc    Manually trigger the AI to re-transcribe the video
